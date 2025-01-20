@@ -1,0 +1,27 @@
+name: alfred
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pandas
+  - setuptools
+  - pyarrow
+  - astropy
+  - numpy
+  - scipy
+  - matplotlib
+  - jupyter
+  - camb
+  - pysr
+  - emcee
+  - corner
+  - pip
+  - pip:
+      - powerbox
+      # - cobaya
+      # - black
+      - git+https://github.com/lisaleemcb/catwoman.git
+      # - openai
+      # - alphadoc
+      # - 21cmtools

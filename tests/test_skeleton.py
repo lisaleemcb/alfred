@@ -1,6 +1,6 @@
 import pytest
 
-from alfred.skeleton import fib, main
+from alfred.models import fib, main
 
 __author__ = "Lisa McBride"
 __copyright__ = "Lisa McBride"
