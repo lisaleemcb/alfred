@@ -5,11 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-import alfredutils as utils
-from alfredparameters import *
+import alfred.utils as utils
+from alfred.parameters import *
 import alfredPee
-import alfredanalyse as analyse
-import alfredKSZ
+import alfred.analyse as analyse
+import alfred.KSZ
 
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 from catwoman.shelter import Cat
@@ -139,7 +139,7 @@ def main():
                             LoReLi_format=True,
                             verbose=False)
 
-        if np.isnan(alfredutils.find_index(sim_check.xe)):
+        if np.isnan(alfred.utils.find_index(sim_check.xe)):
             print(f'Sim {sn} is missing redshifts! Skipping...')
             sims_failed.append(sn)
             continue
