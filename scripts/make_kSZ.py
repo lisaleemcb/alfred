@@ -5,9 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-import alfred.models.utils as utils
-from alfred.models.parameters import *
-import alfred.models
+import alfred.utils as utils
+from alfred.parameters import *
+import alfred.KSZ
 import alfred.analyse as analyse
 
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
@@ -140,7 +140,7 @@ def main():
                             LoReLi_format=True,
                             verbose=False)
 
-        if np.isnan(alfred.utils.find_index(sim_check.xe)):
+        if np.isnan(utils.find_index(sim_check.xe)):
             print(f'Sim {sn} is missing redshifts! Skipping...')
             sims_empty.append(sn)
             continue
@@ -178,7 +178,7 @@ def main():
 
         print('skipping Gorce for the moment (the model, never the real the thing!)')
         #sim = Cat(sn, verbose=True)
-        # Gorce = alfredKSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
+        # Gorce = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
         #             Pee_data=None, xe_data=sim.xe, z_data=sim.z, k_data=None, alpha0=alpha0, kappa=kappa,
         #             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
         
@@ -186,11 +186,11 @@ def main():
         print('simulating LoReLi spectrum...')
         print('----------------------------')
         
-        # LoReLi = alfredKSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
+        # LoReLi = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
         #             Pee_data=sim.Pee, xe_data=sim.xe, z_data=sim.z, k_data=sim.k, alpha0=alpha0, kappa=kappa,
         #             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
         
-        LoReLi_smoothed = alfred.models.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
+        LoReLi_smoothed = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
                     Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, alpha0=KSZ_params['alpha0'],
                     kappa=KSZ_params['kappa'],
                     kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
