@@ -1,7 +1,6 @@
 import sys
 
 from . import models
-from . import utils
 
 if sys.version_info[:2] >= (3, 8):
     # TODO: Import directly (no need for conditional) when `python_requires = >= 3.8`

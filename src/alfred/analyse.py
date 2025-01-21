@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import emcee
 
 import alfred.analyse
-import alfred.utils.utils
+import alfred.models.utils
 import alfred.models
 
 from scipy.interpolate import CubicSpline
-from alfred.utils.parameters import *
+from alfred.models.parameters import *
 
 
 def lklhd(pvals, data, model_func, priors, obs_errs, pfit, debug=False):
@@ -261,7 +261,7 @@ class Fit:
         self.max_logp = self.logp[np.argmax(self.logp)]
         self.logp_best = self.samples[np.argmax(self.logp)]
         self.std = self.samples.std(axis=0)
-        self.mcmc_params = alfred.utils.utils.pack_params(self.logp_best, self.pfit)
+        self.mcmc_params = alfred.models.utils.pack_params(self.logp_best, self.pfit)
         self.mcmc_spectra = self.model.calc_spectra(model_params=self.mcmc_params)
 
         return samples, logp
