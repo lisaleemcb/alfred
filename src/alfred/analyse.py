@@ -3,9 +3,9 @@ import copy as cp
 import matplotlib.pyplot as plt
 import emcee
 
-import alfred.analyse
-import alfred.models.utils
-import alfred.models
+
+import alfred.utils
+import alfred.Pee
 
 from scipy.interpolate import CubicSpline
 from alfred.parameters import *
@@ -107,7 +107,7 @@ class Fit:
                 obs_errs=None,
                 frac_err=None,
                 load_errs=True,
-                model_type=alfred.models.Gorce,
+                model_type=alfred.Pee.Gorce,
                 Pdd=None,
                 pfit=['alpha0', 'kappa'],
                 fit_early=False,
