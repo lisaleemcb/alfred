@@ -7,9 +7,9 @@ import matplotlib
 
 import alfred.utils as utils
 from alfred.parameters import *
-import alfred.Pee
+import alfred.models.Pee
 import alfred.analyse as analyse
-import alfred.KSZ
+import alfred.models.KSZ
 
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 from catwoman.shelter import Cat
@@ -86,7 +86,8 @@ def main():
     else:
         print(f"Folder already exists: {sim_dir}") 
 
-    sims_failed = []
+    sims_empty = []
+    sims_noredshiftfile = []
     print(f'Now simulating {len(sims)} kSZ spectra!')
     for j, sn in enumerate(sims):
 
@@ -125,7 +126,8 @@ def main():
         # kappa = bf[str(sn)]['kappa']
         print('Checking for redshift file...')
         if not os.path.isfile(f'{sim_path}/simu{sn}/redshift_list.dat'):
-            print(f"No redshift file for sim {sn}, skipping...") 
+            print(f"No redshift file for sim {sn}, skipping...")
+            sims_noredshiftfile.append(sn)
             continue
         
 
@@ -141,7 +143,7 @@ def main():
 
         if np.isnan(alfred.utils.find_index(sim_check.xe)):
             print(f'Sim {sn} is missing redshifts! Skipping...')
-            sims_failed.append(sn)
+            sims_empty.append(sn)
             continue
 
         sim = Cat(sn, skip_early=True,
@@ -157,7 +159,7 @@ def main():
 
         if np.any(np.isnan(sim.Pee)):
             print(f'Skipping sim {sn} due to no data!')
-            sims_failed.append(sn)
+            sims_empty.append(sn)
             continue
 
         print('smoothing Pee...')
@@ -189,7 +191,7 @@ def main():
         #             Pee_data=sim.Pee, xe_data=sim.xe, z_data=sim.z, k_data=sim.k, alpha0=alpha0, kappa=kappa,
         #             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
         
-        LoReLi_smoothed = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
+        LoReLi_smoothed = alfred.models.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
                     Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, alpha0=KSZ_params['alpha0'],
                     kappa=KSZ_params['kappa'],
                     kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
@@ -204,6 +206,10 @@ def main():
         end_time = time.time()
         print(f"One kSZ run took {(end_time - start_time) / 60.0 :.3f} minutes")
         print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
+
+    np.save('sims_empty', sims_empty)
+    np.save('sims_noredshiftfile', sims_noredshiftfile)
+    print('Done, YAY!')
 
 if __name__ == "__main__":
     main()
