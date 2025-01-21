@@ -5,8 +5,8 @@ import numpy as np
 import copy as cp
 
 from scipy.interpolate import CubicSpline
-from alfred.parameters import modelparams_Gorce2022
-from alfred import __version__
+from alfred.utils.parameters import modelparams_Gorce2022
+
 
 __author__ = "Lisa McBride"
 __copyright__ = "Lisa McBride"

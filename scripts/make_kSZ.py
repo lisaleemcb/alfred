@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-import alfred.utils as utils
-from alfred.parameters import *
+import alfred.utils.utils as utils
+from alfred.utils.parameters import *
 import alfred.models
 import alfred.analyse as analyse
 
