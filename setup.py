@@ -11,7 +11,10 @@ from setuptools import setup
 
 if __name__ == "__main__":
     try:
-        setup(use_scm_version={"version_scheme": "no-guess-dev"})
+        setup(use_scm_version={"version_scheme": "no-guess-dev"},
+                package_dir={"": "src"},  # Tell setuptools to look in "src/"
+            #    packages=find_packages(where="src"),)
+        )
     except:  # noqa
         print(
             "\n\nAn error occurred while building the project, "
