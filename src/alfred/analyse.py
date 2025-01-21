@@ -8,7 +8,7 @@ import alfred.models.utils
 import alfred.models
 
 from scipy.interpolate import CubicSpline
-from alfred.models.parameters import *
+from alfred.parameters import *
 
 
 def lklhd(pvals, data, model_func, priors, obs_errs, pfit, debug=False):
