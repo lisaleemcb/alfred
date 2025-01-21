@@ -139,7 +139,9 @@ KSZ_params = {'alpha0': 3.7,
 #### Settings for C_ells computation ####
 #########################################
 ### linear ell range for kSZ C_ells
-ells = np.linspace(1,15000, 100)
+
+ells = np.linspace(1,15000, 30)
+#ells = np.linspace(1,15000, 100)
 
 ########################################
 #### Integration/precision settings ####

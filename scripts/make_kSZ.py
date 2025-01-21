@@ -7,7 +7,7 @@ import matplotlib
 
 import alfred.utils as utils
 from alfred.parameters import *
-import alfredPee
+import alfred.Pee
 import alfred.analyse as analyse
 import alfred.KSZ
 
