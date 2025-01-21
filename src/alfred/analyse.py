@@ -3,12 +3,12 @@ import copy as cp
 import matplotlib.pyplot as plt
 import emcee
 
-import ksz.analyse
-import ksz.utils
-import ksz.Pee
+import alfred.analyse
+import alfred.utils
+import alfred.models
 
 from scipy.interpolate import CubicSpline
-from ksz.parameters import *
+from alfred.parameters import *
 
 
 def lklhd(pvals, data, model_func, priors, obs_errs, pfit, debug=False):
@@ -107,7 +107,7 @@ class Fit:
                 obs_errs=None,
                 frac_err=None,
                 load_errs=True,
-                model_type=ksz.Pee.Gorce,
+                model_type=alfred.models.Gorce,
                 Pdd=None,
                 pfit=['alpha0', 'kappa'],
                 fit_early=False,
@@ -235,12 +235,12 @@ class Fit:
         p0 = p0 + np.ones_like(p0) * pvals
 
         if self.fit_EMMA:
-            sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, ksz.analyse.lklhd_EMMA,
+            sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, alfred.analyse.lklhd_EMMA,
                                             args=[self.data, self.model_func, self.priors, self.obs_errs, self.pfit])
 
 
         elif not self.fit_EMMA:
-            sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, ksz.analyse.lklhd,
+            sampler = emcee.EnsembleSampler(self.nwalkers, self.ndim, alfred.analyse.lklhd,
                                             args=[self.data, self.model_func, self.priors, self.obs_errs.flatten(), self.pfit])
 
         state = sampler.run_mcmc(p0, self.burnin)
@@ -261,7 +261,7 @@ class Fit:
         self.max_logp = self.logp[np.argmax(self.logp)]
         self.logp_best = self.samples[np.argmax(self.logp)]
         self.std = self.samples.std(axis=0)
-        self.mcmc_params = ksz.utils.pack_params(self.logp_best, self.pfit)
+        self.mcmc_params = alfred.utils.pack_params(self.logp_best, self.pfit)
         self.mcmc_spectra = self.model.calc_spectra(model_params=self.mcmc_params)
 
         return samples, logp
@@ -275,7 +275,7 @@ class Fit:
 
         for i, ai in enumerate(a0):
             for j, ki in enumerate(kappa):
-                lklhd[i,j] = ksz.analyse.lklhd((ai, ki), self.data, self.model_func,
+                lklhd[i,j] = alfred.analyse.lklhd((ai, ki), self.data, self.model_func,
                                                             self.priors, self.obs_errs, self.pfit)
                 
         flat_index = np.argmax(lklhd)
