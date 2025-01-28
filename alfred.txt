@@ -1,5 +1,3 @@
-# package list for venv initialisation
-
 python
 pandas
 setuptools
@@ -12,7 +10,7 @@ jupyter
 camb
 emcee
 corner
-pip
+tqdm
 
 # then install with pip ('pip install -e .' while in package dir)
 # powerbox

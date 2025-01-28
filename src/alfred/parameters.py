@@ -35,7 +35,7 @@ astro_pnames_formatted = [r'$L_X$', r'$f_X$', r'$\tau$', r'$M_{\text{min}}$', r'
 
 astro_labels_formatted = [
  'Xray \n Lfunc',
- 'hard \n Xray \n fraction',
+ 'hard \n Xray \n fraction'
  'gas \n conversion \n timescale',
  'log10_Mmin',                  
  'ion \n escapefrac \n post']
@@ -214,7 +214,7 @@ z_min = 0.10
 z_piv = 1.0
 z_max = 20.0
 dlogz = 0.1
-dz = 0.15
+dz = 0.15 / 10.0
 z_integ = np.concatenate(
     (
         np.logspace(

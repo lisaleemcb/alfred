@@ -1,3 +1,4 @@
+import os, re
 import argparse
 import logging
 import sys
@@ -114,6 +115,23 @@ def find_index(arr):
 
     print('No monotonically increasing part of this function. Are you sure this is correct?')
     return np.nan
+
+def get_sims(nells=None, dir=f'spectra/kSZ/LoReLi', home_dir='/Users/emcbride'):
+    sims = []
+
+    if nells:
+        path = f'{home_dir}/{dir}/nells{nells}'
+    else:
+        path = f'{home_dir}/{dir}'
+        
+    for filename in os.listdir(path):
+        #files_LoReLi.append(filename)
+        match = re.search(r'\d{5}', filename)
+        sims.append(match.group())
+    
+    print(f'{len(sims)} sims available')
+
+    return sims
 
 # import matplotlib as m
 # cmap = m.cm.get_cmap('Blues')

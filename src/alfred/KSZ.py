@@ -158,6 +158,7 @@ class KSZ_power:
                 Default is False.
 
         """
+        print(f'dz_h is {dz_h}')
 
         self.verbose = verbose
         self.debug = debug
@@ -178,6 +179,7 @@ class KSZ_power:
         self.thetaMC = thetaMC
         self.T_cmb = T_cmb
         self.n_s = n_s
+
 
         if cosmomc:
             self.obh2 = Ob_0
@@ -206,6 +208,7 @@ class KSZ_power:
                 )
                 pars.Reion.redshift = zre_h
                 if self.asym_h_reion:
+                    print(f'dz_h is {dz_h}')
                     pars.Reion.dz = dz_h
                 else:
                     pars.Reion.delta_redshift = dz_h
@@ -424,6 +427,9 @@ class KSZ_power:
 
         self.alpha = 0.0
         if self.verbose:
+            print(self.zre_h)
+            print(self.zend_h)
+            print(self.dz_h)
             print("zre_h = %.2f, zend = %.2f" % (self.zre_h, self.zend_h))
 
         # Initialise arrays for kSZ computation
@@ -747,6 +753,12 @@ class KSZ_power:
             xe = self.xe(z)
             mask_xe = (self.xe(z) > self.xemin) & (self.xe(z) < self.xemax)
             mask_xe = mask_xe.astype(int)
+            print('Mask xe:')
+            print(np.sum(mask_xe))
+            print(f'z_integ: {z_integ.size}')
+            print()
+
+            
 
 
         Pee = (self.f - xe) / self.f * self.W(k, xe) + xe \
@@ -754,7 +766,11 @@ class KSZ_power:
         
         self.mask_k = mask_k
         self.mask_z = mask_z
-        return Pee * mask_k * mask_z * mask_xe
+        self.mask_xe = mask_xe
+        
+        Pee_masked = Pee * mask_k * mask_z * mask_xe
+        print(f'Pee ratio is {np.mean(Pee_masked / Pee)}')
+        return Pee_masked
     
     def earlytime(self,z,k):
         if self.interpolate_xe:
