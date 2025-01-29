@@ -1,3 +1,4 @@
+python
 pandas
 setuptools
 pyarrow
@@ -10,6 +11,7 @@ camb
 emcee
 corner
 powerbox
+tqdm
 
 # then install with pip ('pip install -e .' while in package dir)
 # git+https://github.com/lisaleemcb/catwoman.git

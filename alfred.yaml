@@ -16,6 +16,7 @@ dependencies:
   - pysr
   - emcee
   - corner
+  - tqdm
   - pip
   - pip:
       - powerbox
