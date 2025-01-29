@@ -758,9 +758,6 @@ class KSZ_power:
             print(f'z_integ: {z_integ.size}')
             print()
 
-            
-
-
         Pee = (self.f - xe) / self.f * self.W(k, xe) + xe \
             / self.f * self.bdH(k, z) * self.Pk(k, z)
         

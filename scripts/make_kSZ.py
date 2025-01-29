@@ -29,7 +29,7 @@ def main():
     # fits_path = '/Users/emcbride/lklhd_files'
     # params_path = '/Users/emcbride/kSZ/data/LoreLi_summaries/param_files'
 
-    baddies = ['15593', '13492', '13493'] # these don't have redshift files
+    #baddies = ['15593', '13492', '13493'] # these don't have redshift files
 
     print("Here we go!!!")
 
@@ -39,6 +39,7 @@ def main():
     kSZ_path = '/home/emc-brid/spectra/kSZ'
     fits_path = '/home/emc-brid/lklhd_files'
     params_path = '/home/emc-brid/param_files'
+    redshift_file = '/home/emc-brid/redshift_list.dat'
 
     # sim_path = '/jet/home/emcbride/ps_ee'
     # ion_path = '/jet/home/emcbride/ion_histories_full.npz'
@@ -123,11 +124,11 @@ def main():
         # print()
         # alpha0 = bf[str(sn)]['alpha0']
         # kappa = bf[str(sn)]['kappa']
-        print('Checking for redshift file...')
-        if not os.path.isfile(f'{sim_path}/simu{sn}/redshift_list.dat'):
-            print(f"No redshift file for sim {sn}, skipping...")
-            sims_noredshiftfile.append(sn)
-            continue
+        # print('Checking for redshift file...')
+        # if not os.path.isfile(f'{sim_path}/simu{sn}/redshift_list.dat'):
+        #     print(f"No redshift file for sim {sn}, skipping...")
+        #     sims_noredshiftfile.append(sn)
+        #     continue
         
 
         print('Check cleared...loading data...')
@@ -137,6 +138,7 @@ def main():
                         #    path_spectra=Pee_path,
                             path_params=params_path,
                             path_ion=ion_path,
+                            path_redshifts=redshift_file,
                             LoReLi_format=True,
                             verbose=False)
 
@@ -193,7 +195,7 @@ def main():
         LoReLi_smoothed = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
                     Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, alpha0=KSZ_params['alpha0'],
                     kappa=KSZ_params['kappa'],
-                    kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
+                    kmin=1e-6, kmax=3000, xemin=0.0, xemax=.98, verbose=True, helium_interp=False)
         
         print()
         
