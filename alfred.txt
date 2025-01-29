@@ -1,6 +1,3 @@
-# package list for venv initialisation
-
-python
 pandas
 setuptools
 pyarrow
@@ -12,9 +9,8 @@ jupyter
 camb
 emcee
 corner
-pip
+powerbox
 
 # then install with pip ('pip install -e .' while in package dir)
-# powerbox
 # git+https://github.com/lisaleemcb/catwoman.git
 # this package (alfred)
