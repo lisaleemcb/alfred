@@ -34,8 +34,9 @@ def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
     KSZ.init_reionisation_history()
 
     spectra = KSZ.run_ksz(ells=ells, patchy=True, Dells=True)[:,0]
+    xe = KSZ.xe_interpolated(z_integ)
 
-    return spectra
+    return spectra, xe
 
 class KSZ_power:
     def __init__(
@@ -766,7 +767,7 @@ class KSZ_power:
         self.mask_xe = mask_xe
         
         Pee_masked = Pee * mask_k * mask_z * mask_xe
-        print(f'Pee ratio is {np.mean(Pee_masked / Pee)}')
+        #print(f'Pee ratio is {np.mean(Pee_masked / Pee)}')
         return Pee_masked
     
     def earlytime(self,z,k):
