@@ -10,9 +10,9 @@ jupyter
 camb
 emcee
 corner
+powerbox
 tqdm
 
 # then install with pip ('pip install -e .' while in package dir)
-# powerbox
 # git+https://github.com/lisaleemcb/catwoman.git
 # this package (alfred)
