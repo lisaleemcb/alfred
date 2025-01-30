@@ -34,7 +34,7 @@ def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
     KSZ.init_reionisation_history()
 
     spectra = KSZ.run_ksz(ells=ells, patchy=True, Dells=True)[:,0]
-    xe = KSZ.xe_interpolated(z_integ)
+    xe = KSZ.xe(z_integ)
 
     return spectra, xe
 
@@ -159,8 +159,6 @@ class KSZ_power:
                 Default is False.
 
         """
-        print(f'dz_h is {dz_h}')
-
         self.verbose = verbose
         self.debug = debug
         self.run_CMB = run_CMB
@@ -283,10 +281,8 @@ class KSZ_power:
                 else:
                     self.data_order = 'high to low redshift'
 
-            if debug:
-                print('data was inputted from', self.data_order)
-
             if self.debug:
+                print('data was inputted from', self.data_order)
                 # print('================================')
                 # print('Data for Interpolation (before ordering)')
                 # print('================================')
@@ -316,33 +312,10 @@ class KSZ_power:
 
             self.xe_data = cp.deepcopy(xe_data)
             self.z_data = cp.deepcopy(z_data)
-            self.k_data = cp.deepcopy(k_data)
             if interpolate_Pee:
+                self.k_data = cp.deepcopy(k_data)
                 self.Pee_data = cp.deepcopy(Pee_data)
 
-            # index = 0
-            # if debug:
-            #     print(f'The data as inputted goes from {self.data_order}.')
-            # # Here we enforce that the data is always ordered from smallest to largest redshift
-            # if self.data_order == 'low to high redshift':
-            #   #  index = self.find_index(xe_data[::-1])
-            #   #  if index > 0:
-            #     self.xe_data = cp.deepcopy(xe_data)#[:-index]
-            #     self.z_data = cp.deepcopy(z_data)#[:-index]
-            #     self.k_data = cp.deepcopy(k_data) # need this for Pk
-            #     if interpolate_Pee:
-            #         self.Pee_data = cp.deepcopy(Pee_data)#[:-index,:]
-
-
-            # elif self.data_order == 'high to low redshift':
-            #    # index = self.find_index(xe_data)
-            #     self.xe_data = cp.deepcopy(xe_data)[::-1]
-            #     self.z_data = cp.deepcopy(z_data)[::-1]
-            #     self.k_data = cp.deepcopy(k_data)
-            #     if interpolate_Pee:
-            #         self.Pee_data = cp.deepcopy(Pee_data)[::-1,:]
-                 
-            #     print('Faites attention! Your inputted data was reversed so that the output will be ordered from SMALLEST TO LARGEST REDSHIFTS.')
 
             if self.debug:
                 # print('================================')
@@ -418,9 +391,9 @@ class KSZ_power:
         if self.interpolate_xe:
             xe_max = (1 + self.fHe - self.xe_recomb)
             if self.helium_interp == True:
-                self.zend_h = np.sort(z3)[np.where(self.xe_interpolated(z3) >= 1.08)[0][-1]]
+                self.zend_h = np.sort(z3)[np.where(self.xe(z3) >= 1.08)[0][-1]]
             else:
-                self.zend_h = np.sort(z3)[np.where(self.xe_interpolated(z3) >= 1.0)[0][-1]] #self.z_data.min()
+                self.zend_h = np.sort(z3)[np.where(self.xe(z3) >= 1.0)[0][-1]] #self.z_data.min()
         elif self.asym_h_reion:
             self.zend_h = self.zre_h - self.dz_h
         else:
@@ -428,9 +401,6 @@ class KSZ_power:
 
         self.alpha = 0.0
         if self.verbose:
-            print(self.zre_h)
-            print(self.zend_h)
-            print(self.dz_h)
             print("zre_h = %.2f, zend = %.2f" % (self.zre_h, self.zend_h))
 
         # Initialise arrays for kSZ computation
@@ -464,37 +434,84 @@ class KSZ_power:
                 Redshift range used to compute the ionisation history.
         """
 
-        if self.asym_h_reion:
-            # H reionisation
-            frac = 0.5 * (np.sign(self.zend_h - z) + 1) + 0.5 * (
-                np.sign(z - self.zend_h) + 1
-            ) * abs((self.z_early - z) / (self.z_early - self.zend_h)) ** self.alpha
-        else:
-            deltay = 1.5*np.sqrt(1+self.zre_h) * self.dz_h
-            xod = ((1+self.zre_h)**1.5 - (1+z)**1.5)/deltay
-            frac = (np.tanh(xod)+1.)/2.
+        if not self.interpolate_xe:
+            if self.asym_h_reion:
+                if self.debug:
+                    print('Using asym reionisation model')
+                # H reionisation
+                frac = 0.5 * (np.sign(self.zend_h - z) + 1) + 0.5 * (
+                    np.sign(z - self.zend_h) + 1
+                ) * abs((self.z_early - z) / (self.z_early - self.zend_h)) ** self.alpha
+            else:
+                if self.debug:
+                    print('Using default tanh reionisation model')
+                deltay = 1.5*np.sqrt(1+self.zre_h) * self.dz_h
+                xod = ((1+self.zre_h)**1.5 - (1+z)**1.5)/deltay
+                frac = (np.tanh(xod)+1.)/2.
 
-        # add first He reionisation if needed
-        xe = (1.0 + self.fHe - self.xe_recomb) * frac
+            # add first He reionisation if needed
+            xe = (1.0 + self.fHe - self.xe_recomb) * frac
 
-        # add second He reionisation
-        if self.helium2:
-            assert (self.helium), "Need to set both He reionisation "\
-                "to True, cannot have HeII without HeI"
-            a = np.divide(1, z + 1.0)
-            deltayHe2 = (
-                1.5
-                * np.sqrt(1 + helium_fullreion_redshift)
-                * helium_fullreion_deltaredshift
-            )
-            VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
-            xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
-            tgh2 = np.tanh(xod2)  # check if xod<100
-            xe += (self.fHe - self.xe_recomb) * (tgh2 + 1.0) / 2.0
-        # Ensure continuity of the function
-        x = np.where(z < self.z_early, xe + self.xe_recomb, self.xe_recomb)
+            # add second He reionisation
+            if self.helium2:
+                assert (self.helium), "Need to set both He reionisation "\
+                    "to True, cannot have HeII without HeI"
+                a = np.divide(1, z + 1.0)
+                deltayHe2 = (
+                    1.5
+                    * np.sqrt(1 + helium_fullreion_redshift)
+                    * helium_fullreion_deltaredshift
+                )
+                VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
+                xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
+                tgh2 = np.tanh(xod2)  # check if xod<100
+                xe += (self.fHe - self.xe_recomb) * (tgh2 + 1.0) / 2.0
+            # Ensure continuity of the function
+            xe = np.where(z < self.z_early, xe + self.xe_recomb, self.xe_recomb)
 
-        return x
+        elif self.interpolate_xe:
+            if self.debug:
+                print('Now interpolating xe...')
+
+            z_data = np.sort(self.z_data)
+            xe_data = np.sort(self.xe_data)[::-1]
+            xe_spline = interp1d(z_data, xe_data, axis=0, fill_value="extrapolate") #CubicSpline(z, xe, axis=0)
+
+            frac = 1.0 # - self.xe_recomb)
+            xe_He = 0
+            if self.helium_interp:
+                frac = (1.0 + self.fHe - self.xe_recomb)
+                # add second He reionisation
+                if self.helium2:
+                    assert (self.helium), "Need to set both He reionisation "\
+                        "to True, cannot have HeII without HeI"
+                    a = np.divide(1, z + 1.0)
+                    deltayHe2 = (
+                        1.5
+                        * np.sqrt(1 + helium_fullreion_redshift)
+                        * helium_fullreion_deltaredshift
+                    )
+                    VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
+                    xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
+                    tgh2 = np.tanh(xod2)  # check if xod<100
+                    xe_He += (self.fHe - self.xe_recomb) * (tgh2 + 1.0) / 2.0
+                    xe_He = np.where(z < self.z_early, xe_He, 0.0)
+
+            xe_early = np.where(z > z_data.max(), self.xe_recomb, 0.0)
+            xe_reion = frac * np.where((z <= z_data.max()) & (z >= z_data.min()), xe_spline(z), 0.0)
+            xe_late = np.where(z < z_data.min(), frac, 0.0)
+
+            # print('xe_early:', xe_early)
+            # print('xe_reion:', xe_reion)
+            # print('xe_late:', xe_late)
+            
+            xe = xe_early + xe_reion + xe_late + xe_He
+            # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
+            if self.helium_interp:
+                xe = np.where((z < helium_fullreion_redshift - 1) & (xe <= (1.0 + 2 * self.fHe - self.xe_recomb)), (1.0 + 2 * self.fHe - self.xe_recomb), xe)
+
+
+        return xe
 
     def xe2tau(self, z):
         """
@@ -509,12 +526,7 @@ class KSZ_power:
             H0=self.h * 100, Tcmb0=self.T_cmb, Ob0=self.Ob_0, Om0=self.Om_0
         )
         z = np.sort(z)
-
-        if self.interpolate_xe:
-            xe = np.sort(self.xe_interpolated(z))[::-1]
-           # xe = np.sort(self.interpolate_xe(z))[::-1]
-        else:
-            xe = np.sort(self.xe(z))[::-1]
+        xe = np.sort(self.xe(z))[::-1]
 
         integ = constants.c.value * constants.sigma_T.value * self.nh * xe \
             / cos.H(z).si.value * (1+z)**2
@@ -577,139 +589,6 @@ class KSZ_power:
                 return i
         return None  # Return None if no such index is found
             
-    def Pee_interpolated(self, z_interp, k_interp, method='cubic'):
-        """
-        Electron overdensity power spectrum.
-
-        Note: Requires to initialise reionisation history and to
-        run camb (will do it if it has not been previously done by
-        running self.run_camb() and self.init_reionisation_history().)
-
-        Parameters
-        ----------
-            k: float, array of floats
-                Fourier modes to compute the power spectrum at.
-            z: float, array of floats
-                Redshift to compute the power spectrum at.
-        Outputs
-        -------
-            Pee: array of floats
-                Power spectrum for k and z.
-        """
-
-        if self.debug:
-            print('Now interpolating Pee...')
-
-        xe_interp = self.xe_interpolated(z_interp)
-        Pee_shape = (k_interp * xe_interp).shape
-        Pee_interp = np.zeros(Pee_shape)
-
-        if self.debug:
-            #pass
-            print(f'Pee_interp shape is {Pee_interp.shape}')
-
-        xe = self.xe_data
-        k = self.k_data
-
-        if self.debug:
-            print(f'xe data is {xe}')
-            print(f'k data is {k}')
-
-        fit_points = [xe, k]
-        values = np.log10(self.Pee_data)
-
-        if self.debug:
-            print(f'Pee data is {values}')
-
-        interp = RegularGridInterpolator(fit_points, values, bounds_error=False, fill_value=np.log10(0.0))
-        broadcasted_xe = np.broadcast_to(xe_interp, Pee_shape)
-        broadcasted_k = np.broadcast_to(k_interp, Pee_shape)
-
-        interp_xe_k = np.stack([broadcasted_xe.flatten(), broadcasted_k.flatten()], axis=1)
-        Pee_interp = interp(interp_xe_k, method=method)
-
-        Pee_interp = 10**Pee_interp.reshape(Pee_shape)
-
-        if self.debug:
-            print(f'Pee interpolated is {Pee_interp}')
-
-        mask_k = (k_interp > self.kmin) & (k_interp < self.kmax)
-        mask_k = mask_k.astype(int)
-
-        mask_z = (z_interp > self.zmin) & (z_interp < self.zmax)
-        mask_z = mask_z.astype(int)
-     
-        mask_xe = (xe_interp > self.xemin) & (xe_interp < self.xemax)
-        mask_xe = mask_xe.astype(int)
-
-
-      #  return np.where(np.isnan(Pee_interp) | (Pee_interp < 0.0), 0.0, Pee_interp)
-        return Pee_interp * mask_k * mask_z * mask_xe
-
-    def xe_interpolated(self, z_interp):
-        """
-        Electron overdensity power spectrum.
-
-        Note: Requires to initialise reionisation history and to
-        run camb (will do it if it has not been previously done by
-        running self.run_camb() and self.init_reionisation_history().)
-
-        Parameters
-        ----------
-            k: float, array of floats
-                Fourier modes to compute the power spectrum at.
-            z: float, array of floats
-                Redshift to compute the power spectrum at.
-        Outputs
-        -------
-            xe_interp: array of floats
-                
-        """
-
-        if self.debug:
-            print('Now interpolating xe...')
-
-        z = np.sort(self.z_data)
-        xe = np.sort(self.xe_data)[::-1]
-
-        xe_spline = interp1d(z, xe, axis=0, fill_value="extrapolate") #CubicSpline(z, xe, axis=0)
-
-        frac = 1.0 # - self.xe_recomb)
-
-        xe_He = 0
-        if self.helium_interp:
-            frac = (1.0 + self.fHe - self.xe_recomb)
-            # add second He reionisation
-            if self.helium2:
-                assert (self.helium), "Need to set both He reionisation "\
-                    "to True, cannot have HeII without HeI"
-                a = np.divide(1, z_interp + 1.0)
-                deltayHe2 = (
-                    1.5
-                    * np.sqrt(1 + helium_fullreion_redshift)
-                    * helium_fullreion_deltaredshift
-                )
-                VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
-                xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
-                tgh2 = np.tanh(xod2)  # check if xod<100
-                xe_He += (self.fHe - self.xe_recomb) * (tgh2 + 1.0) / 2.0
-                xe_He = np.where(z_interp < self.z_early, xe_He, 0.0)
-
-        xe_early = np.where(z_interp > z.max(), self.xe_recomb, 0.0)
-        xe_reion = frac * np.where((z_interp <= z.max()) & (z_interp >= z.min()), xe_spline(z_interp), 0.0)
-        xe_late = np.where(z_interp < z.min(), frac, 0.0)
-
-        # print('xe_early:', xe_early)
-        # print('xe_reion:', xe_reion)
-        # print('xe_late:', xe_late)
-        
-        xe_interp = xe_early + xe_reion + xe_late + xe_He
-        # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
-        if self.helium_interp:
-            xe_interp = np.where((z_interp < helium_fullreion_redshift - 1) & (xe_interp <= (1.0 + 2 * self.fHe - self.xe_recomb)), (1.0 + 2 * self.fHe - self.xe_recomb), xe_interp)
-
-        return  xe_interp
-
     def Pee(self, k, z):
         """
         Electron overdensity power spectrum.
@@ -740,45 +619,65 @@ class KSZ_power:
                 )
             self.run_camb()
 
+        xe = self.xe(z)
+
+        if not self.interpolate_Pee: 
+            if self.debug:
+                print('Using Gorce model for Pee...')     
+            Pee = (self.f - xe) / self.f * self.W(k, xe) + xe \
+                        / self.f * self.bdH(k, z) * self.Pk(k, z)
+            
+        elif self.interpolate_Pee:
+            if self.debug:
+                print('Interpolating Pee...')
+
+            Pee_shape = (k * xe).shape
+            fit_points = [self.xe_data, self.k_data]
+            values = np.log10(self.Pee_data)
+
+            if self.debug:
+                #pass
+                print(f'Pee_interp shape is {Pee_shape}')
+               # print(f'Requesting interpolation over {xe}')
+                # print(f'xe data is {self.xe_data}')
+                # print(f'k data is {self.k_data}')
+                # print(f'Pee data is {values}')
+
+            interp = RegularGridInterpolator(fit_points, values, bounds_error=False, fill_value=np.log10(0.0))
+            broadcasted_xe = np.broadcast_to(xe, Pee_shape)
+            broadcasted_k = np.broadcast_to(k, Pee_shape)
+
+            interp_xe_k = np.stack([broadcasted_xe.flatten(), broadcasted_k.flatten()], axis=1)
+            Pee = interp(interp_xe_k, method='cubic')
+            Pee = 10**Pee.reshape(Pee_shape)
+
         mask_k = (k > self.kmin) & (k < self.kmax)
         mask_k = mask_k.astype(int)
 
         mask_z = (z > self.zmin) & (z < self.zmax)
         mask_z = mask_z.astype(int)
 
-        if self.interpolate_xe:
-            xe = self.xe_interpolated(z)
-            mask_xe = (self.xe_interpolated(z) > self.xemin) & (self.xe_interpolated(z) < self.xemax)
-            mask_xe = mask_xe.astype(int)
-        else:
-            xe = self.xe(z)
-            mask_xe = (self.xe(z) > self.xemin) & (self.xe(z) < self.xemax)
-            mask_xe = mask_xe.astype(int)
+        mask_xe = (self.xe(z) > self.xemin) & (self.xe(z) < self.xemax)
+        mask_xe = mask_xe.astype(int)
+
+        if self.debug:
             print('Mask xe:')
             print(np.sum(mask_xe))
             print(f'z_integ: {z_integ.size}')
             print()
 
-        Pee = (self.f - xe) / self.f * self.W(k, xe) + xe \
-            / self.f * self.bdH(k, z) * self.Pk(k, z)
-        
         self.mask_k = mask_k
         self.mask_z = mask_z
         self.mask_xe = mask_xe
         
-        Pee_masked = Pee * mask_k * mask_z * mask_xe
+        Pee = Pee * mask_k * mask_z * mask_xe
         #print(f'Pee ratio is {np.mean(Pee_masked / Pee)}')
-        return Pee_masked
+        return Pee
     
     def earlytime(self,z,k):
-        if self.interpolate_xe:
-            return (self.f - self.xe_interpolated(z)) / self.f * self.W(k, self.xe_interpolated(z)) 
         return (self.f - self.xe(z)) / self.f * self.W(k, self.xe(z)) 
         
     def latetime(self,z,k):
-        if self.interpolate_xe:
-            return self.xe_interpolated(z) / self.f * self.bdH(k, z) * self.Pk(k, z)
-        
         return  self.xe(z) / self.f * self.bdH(k, z) * self.Pk(k, z)
         #return  self.Pk(k, z) # self.bdH(k, z) #* self.Pk(k, z)
 
@@ -800,11 +699,8 @@ class KSZ_power:
         self.tau = self.xe2tau(z3)[0]
         tauf = interp1d(z3, self.xe2tau(z3))  # interpolation
 
-        if self.interpolate_xe:
-            self.x_i_z_integ = self.xe_interpolated(z_integ)  # reionisation history
-        else:
-            self.x_i_z_integ = self.xe(z_integ)  # reionisation history
 
+        self.x_i_z_integ = self.xe(z_integ)  # reionisation history
         self.tau_z_integ = tauf(z_integ)  # thomson optical depth
 
         if self.verbose:
@@ -983,12 +879,7 @@ class KSZ_power:
         )  # linear matter power spectrum
         self.check_ps(self.Pk_lin_integ)
 
-        if self.interpolate_Pee:
-            self.Pee_check = self.Pee(self.kp_integ[:, None], z_integ[:, None, None])
-            self.Pee_integ = self.Pee_interpolated(z_integ[:,None,None], self.kp_integ[:,None])
-
-        else:
-            self.Pee_integ = self.Pee(self.kp_integ[:, None], z_integ[:, None, None])
+        self.Pee_integ = self.Pee(self.kp_integ[:, None], z_integ[:, None, None])
         self.Pk_integ = self.Pk(self.kp_integ[:, None], z_integ[:, None, None])
         self.check_ps(self.Pee_integ, include_zero=True)
         self.check_ps(self.Pk_integ, include_zero=False)
@@ -1080,13 +971,7 @@ class KSZ_power:
         #     raise Warning('Extrapolating the matter PK to too small or too large k')
         self.check_ell = ell
         # Compute I_tot1 and I_tot2, in [Mpc^2]
-        if self.interpolate_Pee:
-            self.Pee_min_kp_check = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
-            self.Pee_min_kp = self.Pee_interpolated(z_integ[:,None,None], self.k_min_kp)
-
-        else:
-            self.Pee_min_kp = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
-
+        self.Pee_min_kp = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
         self.Pk_min_kp = self.Pk(self.k_min_kp, z_integ[:, None, None])
         self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, z_integ[:, None, None])
 
@@ -1177,13 +1062,8 @@ class KSZ_power:
         #     raise Warning('Extrapolating the matter PK to too small or too large k')
         self.check_ell = ell
         # Compute I_tot1 and I_tot2, in [Mpc^2]
-        if self.interpolate_Pee:
-            self.Pee_min_kp_check = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
-            self.Pee_min_kp = self.Pee_interpolated(z_integ[:,None,None], self.k_min_kp)
 
-        else:
-            self.Pee_min_kp = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
-
+        self.Pee_min_kp = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
         self.Pk_min_kp = self.Pk(self.k_min_kp, z_integ[:, None, None])
         self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, z_integ[:, None, None])
 
