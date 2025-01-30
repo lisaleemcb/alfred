@@ -501,10 +501,6 @@ class KSZ_power:
             xe_reion = frac * np.where((z <= z_data.max()) & (z >= z_data.min()), xe_spline(z), 0.0)
             xe_late = np.where(z < z_data.min(), frac, 0.0)
 
-            # print('xe_early:', xe_early)
-            # print('xe_reion:', xe_reion)
-            # print('xe_late:', xe_late)
-            
             xe = xe_early + xe_reion + xe_late + xe_He
             # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
             if self.helium_interp:
@@ -666,12 +662,12 @@ class KSZ_power:
             print(f'z_integ: {z_integ.size}')
             print()
 
-        self.mask_k = mask_k
-        self.mask_z = mask_z
-        self.mask_xe = mask_xe
+            self.mask_k = mask_k
+            self.mask_z = mask_z
+            self.mask_xe = mask_xe
         
         Pee = Pee * mask_k * mask_z * mask_xe
-        #print(f'Pee ratio is {np.mean(Pee_masked / Pee)}')
+        
         return Pee
     
     def earlytime(self,z,k):
@@ -954,11 +950,7 @@ class KSZ_power:
         else:
             g = np.ones(z_integ.size, dtype=bool)
         
-
         self.k_z_integ = ell / self.eta_z_integ
-
-        # print('ell:', ell)
-        # print('eta_z_integ:', self.eta_z_integ)
 
         # in [Mpc-1]
         self.k_min_kp = np.sqrt(
