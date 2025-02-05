@@ -17,6 +17,7 @@ dependencies:
   - emcee
   - corner
   - tqdm
+  - zeus-mcmc
   - pip
   - pip:
       - powerbox
