@@ -33,13 +33,16 @@ def main():
 
     print("Here we go!!!")
 
-    sim_path = '/home/emc-brid/ps_ee'
-    ion_path = '/home/emc-brid/ion_histories_full.npz'
-    Pee_path = '/home/emc-brid/spectra/Pee'
-    kSZ_path = '/home/emc-brid/spectra/kSZ'
-    fits_path = '/home/emc-brid/lklhd_files'
-    params_path = '/home/emc-brid/param_files'
-    redshift_file = '/home/emc-brid/redshift_list.dat'
+    data_dir = '/data/cluster/emc-brid'
+    home_dir = '/home/emc-brid'
+
+    sim_path = f'{data_dir}/ps_ee'
+    ion_path = f'{home_dir}/ion_histories_full.npz'
+    Pee_path = f'{data_dir}/spectra/Pee'
+    kSZ_path = f'{data_dir}/spectra/kSZ'
+    fits_path = f'{home_dir}/lklhd_files'
+    params_path = f'{home_dir}/param_files'
+    redshift_file = f'{home_dir}/redshift_list.dat'
 
     # sim_path = '/jet/home/emcbride/ps_ee'
     # ion_path = '/jet/home/emcbride/ion_histories_full.npz'
@@ -73,7 +76,8 @@ def main():
         print()
 
 
-    ells = np.linspace(1,15000, 30)
+    ells = np.arange(0, 15000, 500)
+    ells[0] = 100   
 
     # check is a dir exists for this numbers of ells
     # and if not, make one
@@ -86,14 +90,10 @@ def main():
     else:
         print(f"Folder already exists: {sim_dir}") 
 
-    sims_empty = []
-    sims_noredshiftfile = []
+    sims_nan = []
     print(f'Now simulating {len(sims)} kSZ spectra!')
     for j, sn in enumerate(sims):
 
-        if sn in baddies:
-            print(f'Skipping sim {sn} because it is a baddie!!')
-            continue
         start_time = time.time()
         print('==================================')
         print(f'Now on the {j+1}th run for sim {sn}')
@@ -159,8 +159,8 @@ def main():
         print('')
 
         if np.any(np.isnan(sim.Pee)):
-            print(f'Skipping sim {sn} due to no data!')
-            sims_empty.append(sn)
+            print(f'Skipping sim {sn} due to nans in data!')
+            sims_nan.append(sn)
             continue
 
         print('smoothing Pee...')
@@ -208,8 +208,7 @@ def main():
         print(f"One kSZ run took {(end_time - start_time) / 60.0 :.3f} minutes")
         print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
 
-    np.save('sims_empty', sims_empty)
-    np.save('sims_noredshiftfile', sims_noredshiftfile)
+    np.save('sims_empty', sims_nan)
     print('Done, YAY!')
 
 if __name__ == "__main__":
