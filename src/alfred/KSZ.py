@@ -21,22 +21,22 @@ from scipy.interpolate import CubicSpline, BSpline, splrep, RegularGridInterpola
 from alfred.parameters import *
 
 
-def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
+def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False, dz=dz,
             Pee_data=None, xe_data=None, z_data=None, k_data=None, alpha0=alpha0, kappa=kappa,
             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False):
         #     kmin=kmin, kmax=kmax, xemin=xemin, xemax=xemax):
     
     KSZ = KSZ_power(verbose=verbose, interpolate_xe=interpolate_xe, interpolate_Pee=interpolate_Pee,
-                helium_interp=helium_interp, debug=debug, alpha0=alpha0, kappa=kappa,
+                helium_interp=helium_interp, debug=debug, alpha0=alpha0, kappa=kappa, dz=dz,
                 Pee_data=Pee_data, xe_data=xe_data, z_data=z_data, k_data=k_data,
                 xemin=xemin, xemax=xemax, kmin=kmin, kmax=kmax)
     KSZ.run_camb(force=True)
     KSZ.init_reionisation_history()
 
     spectra = KSZ.run_ksz(ells=ells, patchy=True, Dells=True)[:,0]
-    xe = KSZ.xe(z_integ)
+    xe = KSZ.xe(KSZ.z_integ)
 
-    return spectra, xe
+    return spectra, xe, KSZ.z_integ
 
 class KSZ_power:
     def __init__(
@@ -51,6 +51,7 @@ class KSZ_power:
         xe_data=None,
         z_data=None,
         k_data=None,
+        dz=dz,
         interpolate_Pee=False,
         interpolate_xe=False,
         helium_interp=False,
@@ -377,6 +378,7 @@ class KSZ_power:
         self.xemax = xemax
         self.kmin = kmin
         self.kmax = kmax
+        self.z_integ = self.set_zinteg(dz=dz)
 
         dlogkp = 0.05
         self.kp_integ = kp_integ
@@ -404,17 +406,17 @@ class KSZ_power:
             print("zre_h = %.2f, zend = %.2f" % (self.zre_h, self.zend_h))
 
         # Initialise arrays for kSZ computation
-        self.x_i_z_integ = np.zeros(z_integ.size)  # ionisation level of IGM
-        self.tau_z_integ = np.zeros(z_integ.size)  # thomson optical depth
-        self.eta_z_integ = np.zeros(z_integ.size)  # comoving dist in [Mpc]
-        self.detadz_z_integ = np.zeros(z_integ.size)  # Hubble parameter [m]
-        self.f_z_integ = np.zeros(z_integ.size)  # growth rate, unit 1
-        self.adot_z_integ = np.zeros(z_integ.size)  # in SI units [s-1]
+        self.x_i_z_integ = np.zeros(self.z_integ.size)  # ionisation level of IGM
+        self.tau_z_integ = np.zeros(self.z_integ.size)  # thomson optical depth
+        self.eta_z_integ = np.zeros(self.z_integ.size)  # comoving dist in [Mpc]
+        self.detadz_z_integ = np.zeros(self.z_integ.size)  # Hubble parameter [m]
+        self.f_z_integ = np.zeros(self.z_integ.size)  # growth rate, unit 1
+        self.adot_z_integ = np.zeros(self.z_integ.size)  # in SI units [s-1]
         self.n_H_z_integ = np.zeros(
-            z_integ.size
+            self.z_integ.size
         )  # number density of baryons in SI units [m-3]
-        self.Pk_lin_integ = np.zeros(z_integ.size)  # linear matter ps
-        self.b_del_e_integ = np.zeros(z_integ.size)  # electrons bias
+        self.Pk_lin_integ = np.zeros(self.z_integ.size)  # linear matter ps
+        self.b_del_e_integ = np.zeros(self.z_integ.size)  # electrons bias
 
         # Fill arrays related to reionisation
         self.init_reionisation_history()
@@ -584,6 +586,33 @@ class KSZ_power:
             if np.all(np.diff(arr[i:]) > 0):
                 return i
         return None  # Return None if no such index is found
+    
+    def set_zinteg(self, dz=0.15):
+        print(f'dz is {dz}')
+        from scipy.optimize import root_scalar
+        # Define the equation f(x) - val1 = 0 to solve for x
+
+        def find_z_xefrac(z_guess):
+            return self.xe(z_guess) - self.xemax
+
+        # Find x using root_scalar within the x range
+        sol = root_scalar(find_z_xefrac, bracket=[4.0, self.z_data[self.xe_data < self.xemax].min()],
+                                             method='brentq')
+
+        if not sol.converged:
+            print('z_integ has an issue!')
+
+        z_piv = sol.root
+
+        z_pre =  np.logspace(np.log10(z_min), np.log10(z_piv),
+            int((np.log10(z_piv) - np.log10(z_min)) / dlogz) + 1)
+        
+        z_EOR = np.arange(z_piv + dz, 10.0, step=dz)
+        z_post = np.arange(10, z_max + 0.5, step=0.5)
+
+        z_integ = np.concatenate((z_pre, z_EOR, z_post))
+
+        return z_integ
             
     def Pee(self, k, z):
         """
@@ -659,7 +688,7 @@ class KSZ_power:
         if self.debug:
             print('Mask xe:')
             print(np.sum(mask_xe))
-            print(f'z_integ: {z_integ.size}')
+            print(f'self.z_integ: {self.z_integ.size}')
             print()
 
             self.mask_k = mask_k
@@ -696,8 +725,8 @@ class KSZ_power:
         tauf = interp1d(z3, self.xe2tau(z3))  # interpolation
 
 
-        self.x_i_z_integ = self.xe(z_integ)  # reionisation history
-        self.tau_z_integ = tauf(z_integ)  # thomson optical depth
+        self.x_i_z_integ = self.xe(self.z_integ)  # reionisation history
+        self.tau_z_integ = tauf(self.z_integ)  # thomson optical depth
 
         if self.verbose:
             print("tau = %.4f" % self.tau)
@@ -837,11 +866,11 @@ class KSZ_power:
         n_H = lambda z: self.nh * (1.0 + z) ** 3.0
 
         self.kmax_pk = kmax_pk
-        self.eta_z_integ = D_C(z_integ)  # comoving distance to z in [Mpc]
-        self.detadz_z_integ = constants.c.value / H(z_integ)  # Hubble parameter in SI units [m]
-        self.f_z_integ = f(z_integ)  # growth rate, no units
-        self.adot_z_integ = (1.0 / (1.0 + z_integ)) * H(z_integ)  # in SI units [s-1]
-        self.n_H_z_integ = n_H(z_integ)  # number density of baryons in SI units [m-3]
+        self.eta_z_integ = D_C(self.z_integ)  # comoving distance to z in [Mpc]
+        self.detadz_z_integ = constants.c.value / H(self.z_integ)  # Hubble parameter in SI units [m]
+        self.f_z_integ = f(self.z_integ)  # growth rate, no units
+        self.adot_z_integ = (1.0 / (1.0 + self.z_integ)) * H(self.z_integ)  # in SI units [s-1]
+        self.n_H_z_integ = n_H(self.z_integ)  # number density of baryons in SI units [m-3]
 
         # Linear matter power spectrum P(z,k) in Mpc^3
         assert (self.kmax_pk <= kmax_camb), \
@@ -871,12 +900,12 @@ class KSZ_power:
         self.Pk = np.vectorize(lambda k, z: interp_nl.P(z, k))
 
         self.Pk_lin_integ = self.Pk_lin(
-            self.kp_integ[:, None], z_integ[:, None, None]
+            self.kp_integ[:, None], self.z_integ[:, None, None]
         )  # linear matter power spectrum
         self.check_ps(self.Pk_lin_integ)
 
-        self.Pee_integ = self.Pee(self.kp_integ[:, None], z_integ[:, None, None])
-        self.Pk_integ = self.Pk(self.kp_integ[:, None], z_integ[:, None, None])
+        self.Pee_integ = self.Pee(self.kp_integ[:, None], self.z_integ[:, None, None])
+        self.Pk_integ = self.Pk(self.kp_integ[:, None], self.z_integ[:, None, None])
         self.check_ps(self.Pee_integ, include_zero=True)
         self.check_ps(self.Pk_integ, include_zero=False)
         self.b_del_e_integ = np.sqrt(self.Pee_integ/self.Pk_integ)  # electrons bias
@@ -937,18 +966,18 @@ class KSZ_power:
             k_integrand: 2D array of floats
                 Differential kSZ along k, as a function of self.kp_integ.
                 self.kp_integ is first column, the integrand is second column.
-            z_integrand: 2D array of floats
-                Differential kSZ along z, as a function of z_integ.
-                z_integ is first column, the integrand is second column.
+            self.z_integrand: 2D array of floats
+                Differential kSZ along z, as a function of self.z_integ.
+                self.z_integ is first column, the integrand is second column.
             Cell: float, optional
                 Total Cell.
         """
         # Preliminaries
         if patchy:
-            g = z_integ >= self.zend_h
+            g = self.z_integ >= self.zend_h
 
         else:
-            g = np.ones(z_integ.size, dtype=bool)
+            g = np.ones(self.z_integ.size, dtype=bool)
         
         self.k_z_integ = ell / self.eta_z_integ
 
@@ -963,9 +992,9 @@ class KSZ_power:
         #     raise Warning('Extrapolating the matter PK to too small or too large k')
         self.check_ell = ell
         # Compute I_tot1 and I_tot2, in [Mpc^2]
-        self.Pee_min_kp = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
-        self.Pk_min_kp = self.Pk(self.k_min_kp, z_integ[:, None, None])
-        self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, z_integ[:, None, None])
+        self.Pee_min_kp = self.Pee(self.k_min_kp, self.z_integ[:, None, None]) 
+        self.Pk_min_kp = self.Pk(self.k_min_kp, self.z_integ[:, None, None])
+        self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, self.z_integ[:, None, None])
 
         self.check_ps(self.Pee_min_kp)
         self.I_e1 = (self.Pee_min_kp / self.kp_integ[:, None] ** 2.0)
@@ -997,28 +1026,28 @@ class KSZ_power:
         # # Compute C_kSZ(ell) integrand, unit 1
         prefac = 8.0 * np.pi ** 2.0 / (2.0 * ell + 1.0) ** 3.0 \
             * (constants.sigma_T.value / constants.c.value) ** 2.0
-        z_integrand = (
+        self.z_integrand = (
             prefac
-            * (self.n_H_z_integ[g] * self.x_i_z_integ[g] / (1.0 + z_integ[g])) ** 2.0
+            * (self.n_H_z_integ[g] * self.x_i_z_integ[g] / (1.0 + self.z_integ[g])) ** 2.0
             * np.exp(-2.0 * self.tau_z_integ[g]) * self.eta_z_integ[g]
             * self.detadz_z_integ[g] * Mpcm ** 3.0
             * simpson(simpson(self.Delta_B2_integrand, x=th_integ), x=np.log10(self.kp_integ))[g]
         )
         k_integrand = simpson(
             prefac
-            * (self.n_H_z_integ[g, None] * self.x_i_z_integ[g, None] / (1.0 + z_integ[g, None])) ** 2.0
+            * (self.n_H_z_integ[g, None] * self.x_i_z_integ[g, None] / (1.0 + self.z_integ[g, None])) ** 2.0
             * np.exp(-2.0 * self.tau_z_integ[g, None]) * self.eta_z_integ[g, None]
             * self.detadz_z_integ[g, None] * Mpcm ** 3.0
             * simpson(self.Delta_B2_integrand[g], x=th_integ),
-            x=z_integ[g],
+            x=self.z_integ[g],
             axis=0
         )
 
         # Compute C_kSZ(ell), no units
-        Cell = trapezoid(z_integrand, z_integ[g])
+        Cell = trapezoid(self.z_integrand, self.z_integ[g])
         self.check_result(Cell)
 
-        return np.c_[self.kp_integ, k_integrand], np.c_[z_integ[g], z_integrand], Cell
+        return np.c_[self.kp_integ, k_integrand], np.c_[self.z_integ[g], self.z_integrand], Cell
 
 
     def C_ell_kSZ(self, ell, patchy=True):
@@ -1055,9 +1084,9 @@ class KSZ_power:
         self.check_ell = ell
         # Compute I_tot1 and I_tot2, in [Mpc^2]
 
-        self.Pee_min_kp = self.Pee(self.k_min_kp, z_integ[:, None, None]) 
-        self.Pk_min_kp = self.Pk(self.k_min_kp, z_integ[:, None, None])
-        self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, z_integ[:, None, None])
+        self.Pee_min_kp = self.Pee(self.k_min_kp, self.z_integ[:, None, None]) 
+        self.Pk_min_kp = self.Pk(self.k_min_kp, self.z_integ[:, None, None])
+        self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, self.z_integ[:, None, None])
 
         self.check_ps(self.Pee_min_kp)
         self.I_e = (self.Pee_min_kp / self.kp_integ[:, None] ** 2.0) - (
@@ -1090,7 +1119,7 @@ class KSZ_power:
             * np.pi ** 2.0
             / (2.0 * ell + 1.0) ** 3.0
             * (constants.sigma_T.value / constants.c.value) ** 2.0
-            * (self.n_H_z_integ * self.x_i_z_integ / (1.0 + z_integ)) ** 2.0
+            * (self.n_H_z_integ * self.x_i_z_integ / (1.0 + self.z_integ)) ** 2.0
             * self.Delta_B2
             * np.exp(-2.0 * self.tau_z_integ)
             * self.eta_z_integ
@@ -1099,10 +1128,10 @@ class KSZ_power:
         )
 
         ### Compute C_kSZ(ell), no units
-        result = trapezoid(self.C_ell_kSZ_integrand, z_integ)
+        result = trapezoid(self.C_ell_kSZ_integrand, self.z_integ)
         if patchy:
-            g = z_integ >= self.zend_h
-            result_p = trapezoid(self.C_ell_kSZ_integrand[g], z_integ[g])
+            g = self.z_integ >= self.zend_h
+            result_p = trapezoid(self.C_ell_kSZ_integrand[g], self.z_integ[g])
             return self.check_result(result_p), self.check_result(result)
         else:
             return self.check_result(result)
