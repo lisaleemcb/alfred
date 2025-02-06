@@ -676,13 +676,13 @@ class KSZ_power:
             Pee = interp(interp_xe_k, method='cubic')
             Pee = 10**Pee.reshape(Pee_shape)
 
-        mask_k = (k > self.kmin) & (k < self.kmax)
+        mask_k = (k >= self.kmin) & (k <= self.kmax)
         mask_k = mask_k.astype(int)
 
-        mask_z = (z > self.zmin) & (z < self.zmax)
+        mask_z = (z >= self.zmin) & (z <= self.zmax)
         mask_z = mask_z.astype(int)
 
-        mask_xe = (self.xe(z) > self.xemin) & (self.xe(z) < self.xemax)
+        mask_xe = (self.xe(z) >= self.xemin) & (self.xe(z) <= self.xemax)
         mask_xe = mask_xe.astype(int)
 
         if self.debug:
