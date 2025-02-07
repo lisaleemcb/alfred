@@ -82,7 +82,7 @@ def main():
     # check is a dir exists for this numbers of ells
     # and if not, make one
     
-    sim_dir = f'{kSZ_path}/LoReLi/nells{ells.size}'
+    sim_dir = f'{kSZ_path}/LoReLi/nells{ells.size}_v2'
     if not os.path.exists(sim_dir):
         # Create the folder
         os.makedirs(sim_dir)
@@ -144,7 +144,6 @@ def main():
 
         if np.isnan(utils.find_index(sim_check.xe)):
             print(f'Sim {sn} is missing redshifts! Skipping...')
-            sims_empty.append(sn)
             continue
 
         sim = Cat(sn, skip_early=True,
@@ -208,7 +207,7 @@ def main():
         print(f"One kSZ run took {(end_time - start_time) / 60.0 :.3f} minutes")
         print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
 
-    np.save('sims_empty', sims_nan)
+    np.save('sims_nan', sims_nan)
     print('Done, YAY!')
 
 if __name__ == "__main__":
