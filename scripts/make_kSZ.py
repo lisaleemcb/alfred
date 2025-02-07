@@ -165,7 +165,7 @@ def main():
             continue
 
         if sim.xe.max() < .98:
-            print(f'Sim {sn} doesn't reach .98 ionisation fraction!')
+            print(f'Sim {sn} does not reach .98 ionisation fraction!')
             sims_failedreion.append(sn)
 
         print('smoothing Pee...')
