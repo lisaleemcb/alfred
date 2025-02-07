@@ -36,7 +36,7 @@ def main():
     data_dir = '/data/cluster/emc-brid'
     home_dir = '/home/emc-brid'
 
-    sim_path = f'{data_dir}/ps_ee'
+    sim_path = f'{home_dir}/ps_ee'
     ion_path = f'{home_dir}/ion_histories_full.npz'
     Pee_path = f'{data_dir}/spectra/Pee'
     kSZ_path = f'{data_dir}/spectra/kSZ'
