@@ -85,7 +85,7 @@ def main():
     sim_dir = f'{kSZ_path}/LoReLi/nells{ells.size}_v2'
     if not os.path.exists(sim_dir):
         # Create the folder
-        os.makedirs(sim_dir)
+        os.makedirs(sim_dir, exist_ok=True)
         print(f"Folder created: {sim_dir}")
     else:
         print(f"Folder already exists: {sim_dir}") 
@@ -151,6 +151,7 @@ def main():
                         #    path_spectra=Pee_path,
                             path_params=params_path,
                             path_ion=ion_path,
+                            path_redshifts=redshift_file,
                             LoReLi_format=True,
                             verbose=True)
         print('data loaded...')
