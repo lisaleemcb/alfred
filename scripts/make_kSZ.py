@@ -208,7 +208,7 @@ def main():
         print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
 
     np.save('sims_nan', sims_nan)
-     np.save('sims_failedreion', sims_failedreion)
+    np.save('sims_failedreion', sims_failedreion)
     print('Done, YAY!')
 
 if __name__ == "__main__":
