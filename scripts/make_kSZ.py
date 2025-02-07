@@ -91,6 +91,7 @@ def main():
         print(f"Folder already exists: {sim_dir}") 
 
     sims_nan = []
+    sims_failedreion = []
     print(f'Now simulating {len(sims)} kSZ spectra!')
     for j, sn in enumerate(sims):
 
@@ -163,14 +164,12 @@ def main():
             sims_nan.append(sn)
             continue
 
-        print('smoothing Pee...')
-        k = []
-        Pee = []
-        for i in range(0, sim.k.size - 1,2):
-            k.append((sim.k[i] + sim.k[i + 1]) / 2.0)
-            Pee.append((sim.Pee[:,i] +sim.Pee[:,i + 1]) / 2.0)
+        if sim.xe.max() < .98:
+            print(f'Sim {sn} doesn't reach .98 ionisation fraction!')
+            sims_failedreion.append(sn)
 
-        Pee = np.asarray(Pee).T
+        print('smoothing Pee...')
+        k, Pee = utils.smooth_Pee(sim)
 
         print('Pee smoothed...')
         print()
@@ -209,6 +208,7 @@ def main():
         print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
 
     np.save('sims_nan', sims_nan)
+     np.save('sims_failedreion', sims_failedreion)
     print('Done, YAY!')
 
 if __name__ == "__main__":

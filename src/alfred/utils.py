@@ -133,6 +133,17 @@ def get_sims(nells=None, dir=f'spectra/kSZ/LoReLi', home_dir='/Users/emcbride'):
 
     return sims
 
+def smooth_Pee(sim):
+    k = []
+    Pee = []
+    for i in range(0, sim.k.size - 1,2):
+        k.append((sim.k[i] + sim.k[i + 1]) / 2.0)
+        Pee.append((sim.Pee[:,i] + sim.Pee[:,i + 1]) / 2.0)
+    
+    Pee = np.asarray(Pee).T
+
+    return k, Pee
+
 # import matplotlib as m
 # cmap = m.cm.get_cmap('Blues')
 # norm = m.colors.Normalize(vmin=min_chi2-10, vmax=min_chi2+20.)

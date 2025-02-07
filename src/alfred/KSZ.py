@@ -36,7 +36,7 @@ def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False, dz=dz
     spectra = KSZ.run_ksz(ells=ells, patchy=True, Dells=True)[:,0]
     xe = KSZ.xe(KSZ.z_integ)
 
-    return spectra, xe, KSZ.z_integ
+    return spectra# , xe, KSZ.z_integ
 
 class KSZ_power:
     def __init__(
