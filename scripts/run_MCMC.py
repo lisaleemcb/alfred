@@ -27,8 +27,8 @@ import argparse
 
 
 def main():
-    #home_dir = '/home/emc-brid'  # glx
-    home_dir = '/Users/emcbride/alfred' # personal ordi
+    home_dir = '/home/emc-brid'  # glx
+    #home_dir = '/Users/emcbride/alfred' # personal ordi
     # home_dir = '/jet/home' # bridges2
 
 
@@ -51,15 +51,15 @@ def main():
 
     ells = np.linspace(1,15000, 30)
     delta_ell = np.diff(ells).mean()
-    ells_error = np.load(f'{home_dir}/notebooks/ells_for_regressor.npy')
+    ells_error = np.load(f'{home_dir}/ells_for_regressor.npy')
 
     df = pd.read_pickle(f'{home_dir}/LoReLi_database_loggedparams.pkl')
     theta_true =  df[df.columns].mean().to_numpy()
     datapoints = kemu(theta_true, scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
 
 
-    a682 = np.load(f'{home_dir}/notebooks/a682_MLerror.npy')
-    b682 = np.load(f'{home_dir}/notebooks/b682_MLerror.npy')
+    a682 = np.load(f'{home_dir}/a682_MLerror.npy')
+    b682 = np.load(f'{home_dir}/b682_MLerror.npy')
 
 
     emu_error_spline = CubicSpline(ells_error, np.maximum(np.abs(a682), b682), bc_type='natural')
