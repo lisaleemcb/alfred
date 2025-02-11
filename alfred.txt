@@ -12,7 +12,9 @@ emcee
 corner
 powerbox
 tqdm
+tensorflow
 zeus-mcmc
+joblib
 
 # then install with pip ('pip install -e .' while in package dir)
 # git+https://github.com/lisaleemcb/catwoman.git

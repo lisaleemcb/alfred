@@ -50,6 +50,7 @@ kmax = 1.5 # To avoid the splitting between the LoReLi spectra and Gorce model a
 xemin = .01
 xemax = .98
 
+
 ##########################
 #### Cosmo parameters ####
 ##########################
@@ -140,8 +141,9 @@ KSZ_params = {'alpha0': 3.7,
 #########################################
 ### linear ell range for kSZ C_ells
 
-ells = np.linspace(1,15000, 30)
-#ells = np.linspace(1,15000, 100)
+ells_old = np.linspace(1,15000, 30)
+ells = np.arange(0, 15000, 500)
+ells[0] = 100   
 
 ########################################
 #### Integration/precision settings ####
@@ -267,3 +269,10 @@ colorlist = [
 cmaps = ["Blues", "Oranges", "Greens", "PuRd"]
 alphas = [0.5, 0.5, 0.5, 0.9]
 smooth = 1.0
+
+telescopes ={
+    'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0},
+    'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5},
+    'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142},
+    'CMB-HD': {'fsky':0.5, 'fwhm':0.5, 'noise':2.7},
+}
