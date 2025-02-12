@@ -122,49 +122,52 @@ def main():
             signal = ksz['kSZ']
 
         return -0.5 * np.sum((data - signal) ** 2.0 / err**2.0)
+    
+    move_labels = ['Diff', 'Gaussian', 'Global', 'KDE']
+    moves = [zeus.moves.DifferentialMove(), zeus.moves.GaussianMove(), zeus.moves.GlobalMove(), zeus.moves.KDEMove()]
+
+    for i, m in enumerate(moves):
+        chains_fn = f"saved_chains_{move_labels[i]}.h5"
+        save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
+
+        autocorr_check = zeus.callbacks.AutocorrelationCallback(ncheck=100, dact=0.01, nact=50, discard=0.5)
+        R_check = zeus.callbacks.SplitRCallback(ncheck=100, epsilon=0.01, nsplits=2, discard=0.5)
+        miniter_check = zeus.callbacks.MinIterCallback(nmin=500)
+
+        nwalkers = 12
+        burnin = 500
+        nsteps = int(1e4)
+        ndim = len(theta_true)
+
+        #p0 = pass_prior[:12]
+        p0 = pass_prior[50:62]
+        #p0 = pass_prior[100:112]
+                
+        print('Okay, here we go!')
+        start_time = time.time()
+
+        sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
+                        args=[datapoints, np.sqrt(np.diag(err_cov_justemu))])
+
+        sampler.run_mcmc(p0, burnin)
+
+        burnin_samples = sampler.get_chain()
+        start = burnin_samples[-1] # Get the burnin samples
+
+        sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
+                        args=[datapoints, np.sqrt(np.diag(err_cov_justemu))], moves=m)
+        sampler.run_mcmc(start, nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
 
 
-    chains_fn = "saved_chains.h5"
-    save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
+        end_time = time.time()
 
-    autocorr_check = zeus.callbacks.AutocorrelationCallback(ncheck=100, dact=0.01, nact=50, discard=0.5)
-    R_check = zeus.callbacks.SplitRCallback(ncheck=100, epsilon=0.01, nsplits=2, discard=0.5)
-    miniter_check = zeus.callbacks.MinIterCallback(nmin=500)
+        print('finished MCMC, saving files...')
 
-    nwalkers = 12
-    burnin = 500
-    nsteps = int(1e6)
-    ndim = len(theta_true)
-
-    #p0 = pass_prior[:12]
-    p0 = pass_prior[50:62]
-    #p0 = pass_prior[100:112]
-            
-    print('Okay, here we go!')
-    start_time = time.time()
-
-    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, np.sqrt(np.diag(err_cov_justemu))])
-
-    sampler.run_mcmc(p0, burnin)
-
-    burnin_samples = sampler.get_chain()
-    start = burnin_samples[-1] # Get the burnin samples
-
-    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, np.sqrt(np.diag(err_cov_justemu))], moves=zeus.moves.GlobalMove())
-    sampler.run_mcmc(start, nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
-
-
-    end_time = time.time()
-
-    print('finished MCMC, saving files...')
-
-    np.save('burnin', burnin_samples)
-    np.save('samples', sampler.get_chain())
-    np.save('logps', sampler.get_log_prob())
-    np.save('tau', autocorr_check.estimates)
-    np.save('R', R_check.estimates)
+        np.save(f'burnin_{move_labels[i]}', burnin_samples)
+        np.save(f'samples_{move_labels[i]}', sampler.get_chain())
+        np.save(f'logps_{move_labels[i]}', sampler.get_log_prob())
+        np.save(f'tau_{move_labels[i]}', autocorr_check.estimates)
+        np.save(f'R_{move_labels[i]}', R_check.estimates)
 
     print('Done, YAY!')
 

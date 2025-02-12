@@ -15,6 +15,7 @@ tqdm
 tensorflow
 zeus-mcmc
 joblib
+torch
 
 # then install with pip ('pip install -e .' while in package dir)
 # git+https://github.com/lisaleemcb/catwoman.git
