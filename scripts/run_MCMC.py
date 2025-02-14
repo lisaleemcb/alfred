@@ -12,7 +12,7 @@ from scipy.interpolate import PchipInterpolator, CubicSpline
 
 import alfred.utils as utils
 from alfred.parameters import *
-from alfred.emulator import kemu
+import alfred.emulator
 import alfred.KSZ
 import alfred.analyse as analyse
 
@@ -55,11 +55,11 @@ def main():
 
     df = pd.read_pickle(f'{home_dir}/LoReLi_database_loggedparams.pkl')
     theta_true =  df[df.columns].mean().to_numpy()
-    datapoints = kemu(theta_true, scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
+    datapoints = alfred.emulator.kemu(theta_true, scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
 
 
-    a682 = np.load(f'{home_dir}/a682_MLerror.npy')
-    b682 = np.load(f'{home_dir}/b682_MLerror.npy')
+    # a682 = np.load(f'{home_dir}/a682_MLerror.npy')
+    # b682 = np.load(f'{home_dir}/b682_MLerror.npy')
     errors = np.load(f"{data_dir}/emulators/NN_LoReLi_errors.npy")
 
     # emu_error_spline = CubicSpline(ells_error, np.maximum(np.abs(a682), b682), bc_type='natural')
