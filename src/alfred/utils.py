@@ -123,11 +123,18 @@ def get_sims(nells=None, dir=f'spectra/kSZ/LoReLi', home_dir='/Users/emcbride'):
         path = f'{home_dir}/{dir}/nells{nells}'
     else:
         path = f'{home_dir}/{dir}'
+
+    print(f'parsing {path} ...')
         
     for filename in os.listdir(path):
         #files_LoReLi.append(filename)
+        # print(repr(filename))
         match = re.search(r'\d{5}', filename)
-        sims.append(match.group())
+        print(match.group())
+        if match.group() is not None:
+            sims.append(match.group())
+        else:
+            print(f'filename {filename} has no match')
     
     print(f'{len(sims)} sims available')
 

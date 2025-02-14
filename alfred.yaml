@@ -21,9 +21,12 @@ dependencies:
   - pip
   - pip:
       - powerbox
+      - anesthetic
       # - cobaya
       # - black
       - git+https://github.com/lisaleemcb/catwoman.git
       # - openai
       # - alphadoc
       # - 21cmtools
+
+# also MPI is required for polychord

@@ -18,17 +18,22 @@ from alfred.parameters import *
 home_dir = 'Users/emcbride'
 
 def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
-    X = scalerX.transform(params[None,:]) # the [None,:] is required by keras to maintain a rank 2 shape
-#    print(X)
+    if params.ndim == 2:
+        X = scalerX.transform(params)
+
+    elif params.ndim == 1:
+        X = scalerX.transform(params[None,:]) # the [None,:] is required by keras to maintain a rank 2 shape
+
     prediction = model.predict(X, verbose=0)
-#    print(prediction)
     Y = scalerY.inverse_transform(prediction) # this comes out as a rank 2
-#    print(Y)
 
     if log_data:
         Y = 10**Y
         
-    return Y.flatten()
+    if params.ndim == 1:
+        Y = Y.flatten()
+
+    return Y
 
 class Emulator:
     """A base class with for kSZ emulator."""
@@ -176,28 +181,33 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, dataset, hyperparameters, features,
+    def __init__(self, dataset, hyperparameters, features, neurons=10, epochs=100,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
         super().__init__(features=features, dataset=dataset, hyperparameters=hyperparameters,
                           scale_data=scale_data, log_data=log_data, method=method, verbose=verbose)
+        
+        self.neurons = neurons
+        self.epochs = epochs
 
     def regress(self, X_train, X_test, y_train, y_test):
         if self.verbose:
-            print(f"Now running regression...")
+            print(f"Now running regression with {self.neurons} neurons in the middle layer and {self.epochs} epochs...")
             
         self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
-        self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
-        self.model.add(Dense(units=10, activation='relu')) # Second hidden layer
-        self.model.add(Dense(units=30))      # Output layer (for regression, no activation function)
+       # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
+        self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
+        self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
+        self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
+        self.model.add(Dense(units=30, activation='linear'))      # Output layer (for regression, no activation function)
         
         # Compile the model
-        self.model.compile(optimizer='adam', loss='mean_squared_error')
+        self.model.compile(optimizer='RMSprop', loss='mean_squared_error')
         
         # Train the model
         self.history = self.model.fit(X_train, y_train,
-                                                    epochs=100,
+                                                    epochs=self.epochs,
                                                     batch_size=32,
                                                     validation_data=(X_test, y_test),
                                                     verbose=0)

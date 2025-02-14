@@ -30,7 +30,6 @@ def main():
     home_dir = '/home/emc-brid'  # glx
     #home_dir = '/Users/emcbride/alfred' # personal ordi
     # home_dir = '/jet/home' # bridges2
-
     data_dir = '/data/cluster/emc-brid'
 
     #baddies = ['15593', '13492', '13493'] # these don't have redshift files
@@ -46,9 +45,9 @@ def main():
     redshift_file = '{home_dir}/redshift_list.dat'
 
  
-    scalerX = joblib.load("scalerX_v3.pkl")
-    scalerY = joblib.load("scalerY_v3.pkl")
-    model = tf.keras.models.load_model('NNv3_model.keras')
+    scalerX = joblib.load(f"{data_dir}/emulators/scalerX_LoReLi_style.pkl")
+    scalerY = joblib.load(f"{data_dir}/emulators/scalerY_LoReLi_style.pkl")
+    model = tf.keras.models.load_model(f"{data_dir}/emulators/NN_LoReLi_style_model.keras")
 
     ells = np.linspace(1,15000, 30)
     delta_ell = np.diff(ells).mean()
@@ -61,10 +60,11 @@ def main():
 
     a682 = np.load(f'{home_dir}/a682_MLerror.npy')
     b682 = np.load(f'{home_dir}/b682_MLerror.npy')
+    errors = np.load(f"{data_dir}/emulators/NN_LoReLi_errors.npy")
 
-
-    emu_error_spline = CubicSpline(ells_error, np.maximum(np.abs(a682), b682), bc_type='natural')
-    emu_error = emu_error_spline(ells)
+    # emu_error_spline = CubicSpline(ells_error, np.maximum(np.abs(a682), b682), bc_type='natural')
+    # emu_error = emu_error_spline(ells)
+    emu_error = np.maximum(np.abs(errors[0]), errors[1])
 
     labels = df.columns
     priors = [(df[p].to_numpy().min(), df[p].to_numpy().max()) for p in labels]
@@ -112,7 +112,8 @@ def main():
 
     def lnlike(theta, data, err, sn):
         if not sn:
-            guess_model = kemu(theta, scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
+            guess_model = alfred.emulator.kemu(theta,
+                            scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
             
             return -0.5 * np.sum((data - guess_model) ** 2.0 / err**2.0)
 
@@ -152,7 +153,8 @@ def main():
     start = burnin_samples[-1] # Get the burnin samples
 
     sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, np.sqrt(np.diag(err_cov_justemu))], moves=zeus.moves.GlobalMove())
+                    args=[datapoints, np.sqrt(np.diag(err_cov_justemu))],
+                      moves=zeus.moves.GlobalMove(rescale_cov=.1))
     sampler.run_mcmc(start, nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
 
 
@@ -161,8 +163,8 @@ def main():
     print('finished MCMC, saving files...')
 
     np.save('burnin', burnin_samples)
-    np.save('samples', sampler.get_chain())
-    np.save('logps', sampler.get_log_prob())
+    # np.save('samples', sampler.get_chain())
+    # np.save('logps', sampler.get_log_prob())
     np.save('tau', autocorr_check.estimates)
     np.save('R', R_check.estimates)
 

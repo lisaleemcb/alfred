@@ -127,6 +127,7 @@ def main():
     moves = [zeus.moves.DifferentialMove(), zeus.moves.GaussianMove(), zeus.moves.GlobalMove(), zeus.moves.KDEMove()]
 
     for i, m in enumerate(moves):
+        print(f"Now on move {move_labels[i]}")
         chains_fn = f"saved_chains_{move_labels[i]}.h5"
         save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
 
