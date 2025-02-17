@@ -116,13 +116,10 @@ def find_index(arr):
     print('No monotonically increasing part of this function. Are you sure this is correct?')
     return np.nan
 
-def get_sims(nells=None, dir=f'spectra/kSZ/LoReLi', home_dir='/Users/emcbride'):
+def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir='/Users/emcbride/Datasets/LoReLi'):
     sims = []
 
-    if nells:
-        path = f'{home_dir}/{dir}/nells{nells}'
-    else:
-        path = f'{home_dir}/{dir}'
+    path = f'{base_dir}/{dir}'
 
     print(f'parsing {path} ...')
         
@@ -130,7 +127,7 @@ def get_sims(nells=None, dir=f'spectra/kSZ/LoReLi', home_dir='/Users/emcbride'):
         #files_LoReLi.append(filename)
         # print(repr(filename))
         match = re.search(r'\d{5}', filename)
-        print(match.group())
+       # print(match.group())
         if match.group() is not None:
             sims.append(match.group())
         else:
