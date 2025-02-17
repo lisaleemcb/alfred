@@ -77,10 +77,10 @@ def main():
         print()
 
     if args.save_dir:
-        save_dir = f'{kSZ_path}/LoReLi/{args.save_dir}'
+        save_dir = f'{base_dir}/{kSZ_path}/LoReLi/{args.save_dir}'
 
     else:
-        save_dir = f'{kSZ_path}/LoReLi/nells{ells.size}'
+        save_dir = f'{base_dir}/{kSZ_path}/LoReLi/nells{ells.size}'
 
     # check is a dir exists for this numbers of ells
     # and if not, make one
