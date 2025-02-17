@@ -34,10 +34,10 @@ def main():
 
     print("Here we go!!!")
 
-    # data_dir = '/data/cluster/emc-brid'
+    data_dir = '/data/cluster/emc-brid'
     home_dir = '/home/emc-brid'
     # home_dir = '/Users/emcbride'
-    base_dir = f'{home_dir}/Datasets/LoReLi'
+    base_dir = f'{data_dir}/Datasets/LoReLi'
     # home_dir = '/jet/home/emcbride'
 
     spectra_path = 'ps_ee'
