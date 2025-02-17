@@ -164,7 +164,7 @@ def main():
             sims_nan.append(sn)
             continue
 
-        if sim.xe.max() < .98:
+        if sim.xe.max() < .97:
             print(f'Sim {sn} does not reach .98 ionisation fraction!')
             sims_failedreion.append(sn)
 
@@ -194,7 +194,7 @@ def main():
         Dell = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
                     Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, alpha0=KSZ_params['alpha0'],
                     kappa=KSZ_params['kappa'],
-                    kmin=1e-6, kmax=3000, xemin=0.0, xemax=.98, verbose=True, helium_interp=False)
+                    kmin=1e-6, kmax=3000, xemin=0.0, xemax=.97, verbose=True, helium_interp=False)
         
         print()
         
