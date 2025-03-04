@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 #######################################
 ########### System settings ###########
 #######################################
+#home_dir = '/home/emc-brid'
+home_dir = '/Users/emcbride'
+base_dir = f'/Users/emcbride/Datasets/LoReLi'
+#data_dir = '/data/cluster/emc-brid/'
 
 ##########################
 ####  Helpful things  ####
@@ -269,10 +273,3 @@ colorlist = [
 cmaps = ["Blues", "Oranges", "Greens", "PuRd"]
 alphas = [0.5, 0.5, 0.5, 0.9]
 smooth = 1.0
-
-telescopes ={
-    'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0},
-    'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5},
-    'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142},
-    'CMB-HD': {'fsky':0.5, 'fwhm':0.5, 'noise':2.7},
-}

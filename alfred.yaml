@@ -18,6 +18,7 @@ dependencies:
   - corner
   - tqdm
   - zeus-mcmc
+  - toml
   - pip
   - pip:
       - powerbox

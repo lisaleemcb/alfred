@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import pandas as pd
 
+import joblib
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Dense
@@ -37,9 +38,14 @@ def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
 
 class Emulator:
     """A base class with for kSZ emulator."""
-    def __init__(self, features, dataset=None, hyperparameters=None,
+    def __init__(self, features=None, dataset=None, hyperparameters=None,
                  data_dir=f'/{home_dir}',
                  scale_data=True,
+                 X_train=None,
+                 X_test=None,
+                 y_train=None,
+                 y_test=None,
+                 model=None,
                  log_data=True,
                  method='Emulator_Base_Class',
                  verbose=True):
@@ -48,6 +54,11 @@ class Emulator:
         self.features = features
         self.hyperparameters = hyperparameters
         self.data_dir = data_dir
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test= y_test
+        self.model = model
         self.scale_data = scale_data
         self.log_data = log_data
         self.method = method
@@ -66,30 +77,33 @@ class Emulator:
         if self.verbose:
             print('Prepping data for regresson')
             
-        self.params = self.dataset.to_numpy()
+        # self.params = np.asarray(self.dataset)
     
-        samples = np.zeros((len(self.dataset.index.tolist()), nells))
-        for i, sn in enumerate(self.dataset.index.tolist()):
-            fn = f'{self.data_dir}/nells{nells}_v2/kSZ_LoReLi_simu{sn}.npz'
-            spectra = np.load(fn)
+        # samples = np.zeros((len(self.dataset.index.tolist()), nells))
+        # for i, sn in enumerate(self.dataset.index.tolist()):
+        #     fn = f'{self.data_dir}/nells{nells}_v2/kSZ_LoReLi_simu{sn}.npz'
+        #     spectra = np.load(fn)
 
-            samples[i] = spectra['kSZ']
+        #     samples[i] = spectra['kSZ']
 
         if self.log_data:
             if self.verbose:
-                print('logging spectra data...')
-            samples = np.log10(samples)
+                print('logging input data...')
+            self.dataset = np.log10(self.dataset)
                 
-        self.ells = spectra['ells'] 
-        self.samples = samples
-        self.pn = np.where(np.isin(self.dataset.columns, self.features))[0]
+        # self.ells = spectra['ells'] 
+        # self.samples = samples
+        # self.pn = np.where(np.isin(self.dataset.columns, self.features))[0]
 
-        if self.verbose:
-            print(f'Prepped data')
-            print(f'{samples.shape} samples')
-            print(f'{self.params[:,self.pn].shape} features')
+        # if self.verbose:
+        #     print(f'Prepped data')
+        #     print(f'{samples.shape} samples')
+        #     print(f'{self.params[:,self.pn].shape} features')
             
-        X_train, X_test, y_train, y_test = train_test_split(self.params[:,self.pn], samples, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.features,
+                                                            self.dataset,
+                                                            test_size=0.2,
+                                                            random_state=42)
 
         if self.scale_data:
             if self.verbose:
@@ -104,19 +118,26 @@ class Emulator:
             y_train = self.scalerY.fit_transform(y_train)
             y_test = self.scalerY.transform(y_test)
 
-        return X_train, X_test, y_train, y_test
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test= y_test
 
-    def fancy_plot(self, y_test, y_pred):
+       # return X_train, X_test, y_train, y_test
+
+    def fancy_plot(self, xvariable):
         # plot Cls true and Cls predicted with errors
 
         if self.scale_data:
-            y_test = self.scalerY.inverse_transform(y_test)
+           y_test = self.scalerY.inverse_transform(self.y_test)
 
         if self.log_data:
             y_test = 10.0**y_test
 
+        y_pred = self.prediction(self.X_test)
+
         new_length = 9991
-        new_xx = np.linspace(1, 15000, 11000)
+        new_xx = np.linspace(xvariable.min(), xvariable.max(), 11000)
         
         # pick random subset of 50 parameters among the test set 
         subset_indices = np.random.randint(low=0, high=y_test.shape[0], size=50)
@@ -128,41 +149,42 @@ class Emulator:
             # plot true spectra for parameter set
             # rescale to true amplitudes (without alpha_i)
             ytrue = y_test[ind]
-            axes[0].scatter(self.ells,ytrue, marker="+", color=color, s=30, zorder=2,alpha=.5)
+            axes[0].scatter(xvariable, ytrue, marker="+", color=color, s=30, zorder=2,alpha=.5)
             # plot predicted spectra for parameter set
             yrecons = y_pred[ind]
             # interpolated version to look nice
-            new_yy = scipy.interpolate.interp1d(self.ells,y_pred[ind,:] , kind='quadratic', fill_value='extrapolate')(new_xx)
+            new_yy = scipy.interpolate.interp1d(xvariable,y_pred[ind,:] , kind='quadratic', fill_value='extrapolate')(new_xx)
             #new_yy = new_yy*(exponents[0]*np.prod(np.abs(X_test[ind,:]/theta_ref)**exponents[1:]))
             axes[0].plot(new_xx,new_yy, "-", color=color, lw=1., zorder=1,alpha=.5)
             # ratio of pred to true
-            axes[1].plot(self.ells,y_pred[ind,:]/y_test[ind,:],marker='o',color=color,lw=1,markersize=3,alpha=.5)
+            axes[1].plot(xvariable,y_pred[ind,:]/y_test[ind,:],marker='o',color=color,lw=1,markersize=3,alpha=.5)
             # diff between pred and true
-            axes[2].plot(self.ells,ytrue-yrecons,marker='o',color=color,lw=1,markersize=3,alpha=.5)
+            axes[2].plot(xvariable,ytrue-yrecons,marker='o',color=color,lw=1,markersize=3,alpha=.5)
         
         # uncertainties on ratio
         ratio = y_pred/y_test
         a68, b68 = np.percentile(ratio,percentile1,axis=0), np.percentile(ratio,percentile2,axis=0)
-        axes[1].fill_between(self.ells, b68, a68, color='k',alpha=0.2)
-        axes[1].plot(self.ells,np.median(ratio,axis=0),color='k', linestyle='-', linewidth=2)
+        axes[1].fill_between(xvariable, b68, a68, color='k',alpha=0.2)
+        axes[1].plot(xvariable,np.median(ratio,axis=0),color='k', linestyle='-', linewidth=2)
         # uncertainties on difference
         ratio2 = (y_test - y_pred)#*(exponents[0]*np.prod(np.abs(X_test/theta_ref)**exponents[1:],axis=1))[:,None]
         a682, b682 = np.percentile(ratio2,percentile1,axis=0), np.percentile(ratio2,percentile2,axis=0)
-        axes[2].fill_between(self.ells, b682, a682, color='k',alpha=0.2)
-        axes[2].plot(self.ells,np.median(ratio2,axis=0),color='k', linestyle='-', linewidth=2)
+        axes[2].fill_between(xvariable, b682, a682, color='k',alpha=0.2)
+        axes[2].plot(xvariable,np.median(ratio2,axis=0),color='k', linestyle='-', linewidth=2)
             
         axes[0].scatter([], [], marker="+", color='k', s=30, label='True values')
         axes[0].plot([], [], color='k', lw=1., label='Recovered')
         
         axes[0].legend(loc='best', fontsize=15)
-        axes[0].set_ylim(bottom=0)
-        #axes[0].set_xlim(0, 1e4)
+
+        axes[0].set_ylim(0, 1.5)
+
         axes[1].set_ylim(0.5,1.25)
         axes[2].set_ylim(-0.1,0.1)
         axes[1].axhline(.88, color='red')
         axes[1].axhline(1.12, color='red')
-        axes[-1].set_xlabel(r"Angular multipole $\ell$", fontsize=15)
-        axes[0].set_ylabel(r"$C_\ell^{kSZ}$ [$\mu$K$^2$]", fontsize=15)
+       # axes[-1].set_xlabel(r"Angular multipole $\ell$", fontsize=15)
+       # axes[0].set_ylabel(r"$C_\ell^{kSZ}$ [$\mu$K$^2$]", fontsize=15)
         axes[1].set_ylabel(r"Ratio", fontsize=15)
         axes[2].set_ylabel(r"Diff [$\mu$K$^2$]", fontsize=15)
         
@@ -181,42 +203,71 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, dataset, hyperparameters, features, neurons=10, epochs=100,
+    def __init__(self, dataset, features, hyperparameters,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
         super().__init__(features=features, dataset=dataset, hyperparameters=hyperparameters,
                           scale_data=scale_data, log_data=log_data, method=method, verbose=verbose)
-        
-        self.neurons = neurons
-        self.epochs = epochs
 
-    def regress(self, X_train, X_test, y_train, y_test):
+        self.neurons = hyperparameters['neurons']
+        self.epochs = hyperparameters['epochs']
+
+    def regress(self):
         if self.verbose:
             print(f"Now running regression with {self.neurons} neurons in the middle layer and {self.epochs} epochs...")
+
+        
+        def custom_loss(y_true, y_pred):
+            loss = tf.reduce_mean(tf.losses.binary_crossentropy(y_true, y_pred))
+            return loss + 0.01 * tf.reduce_sum(y_pred)  # Adding a small regularization term as an example
+
+
+        layer_norm = tf.keras.layers.Normalization()
+        layer_norm.adapt(self.X_train)
+
+        nx = self.dataset.shape[1]
+        # Define the model
+        self.model = Sequential([
+            layer_norm,
+            Dense(nx, activation='relu', input_shape=(self.X_train.shape[1],)),
+            Dense(nx, activation='relu'),
+            Dense(nx, activation='relu'),
+            #layers.Dense(nx, activation='relu'),
+            Dense(nx, activation='relu'),
+            Dense(nx, activation='linear')#'softmax' 'sigmoid'
+        ])
+
+        #model.compile(optimizer='adam',loss='mse', metrics=['accuracy'])
+        self.model.compile(optimizer='adam',loss='mse', metrics=[tf.keras.metrics.MeanSquaredError()])
+        #model.compile(optimizer='adam', loss=lambda y_true, y_pred: weighted_mse_loss(y_true, y_pred, uncertainty_tensor))
+        # Train the model with validation data
+
+        self.history = self.model.fit(self.X_train, self.y_train, epochs=600, batch_size=35, validation_data=(self.X_test, self.y_test))
             
-        self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
-       # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
-        self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-        self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
-        self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-        self.model.add(Dense(units=30, activation='linear'))      # Output layer (for regression, no activation function)
+    #     self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
+    #    # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
+    #     self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
+    #     self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
+    #     self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
+    #     self.model.add(Dense(units=self.dataset.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
         
-        # Compile the model
-        self.model.compile(optimizer='RMSprop', loss='mean_squared_error')
+    #     # Compile the model
+    #     self.model.compile(optimizer='RMSprop', loss='mean_squared_error')
         
-        # Train the model
-        self.history = self.model.fit(X_train, y_train,
-                                                    epochs=self.epochs,
-                                                    batch_size=32,
-                                                    validation_data=(X_test, y_test),
-                                                    verbose=0)
+    #     # Train the model
+    #     self.history = self.model.fit(self.X_train, self.y_train,
+    #                                                 epochs=self.epochs,
+    #                                                 batch_size=32,
+    #                                                 validation_data=(self.X_test, self.y_test),
+    #                                                 verbose=0)
+        
         return
                                     
         
-    def metrics(self, X_test, y_test):
+    def metrics(self):
         # Evaluate the model
-        loss = self.model.evaluate(X_test, y_test)
+        loss = self.model.evaluate(self.X_test, self.y_test)
         print(f"Test loss: {loss}")
 
         return
@@ -233,22 +284,38 @@ class NeuralNetwork(Emulator):
 
         return y
     
-    # def save(self, path):
-    #     # Save the Keras model
-    #     self.model.save(f"{path}_model.keras")
-    #     # Save the rest of the object with pickle
-    #     with open(f"{path}_wrapper.pkl", "wb") as f:
-    #         pickle.dump(self, f)
+    def save(self, dir, path=f"{base_dir}/emulators"):
+        os.makedirs(f"{path}/{dir}")
+        self.model.save(f"{path}/{dir}/model.keras")
 
-    # @staticmethod
-    # def load(path):
-    #     # Load the wrapper object first
-    #     with open(f"{path}_wrapper.pkl", "rb") as f:
-    #         wrapper = pickle.load(f)
-    #     # Load the Keras model
-    #     wrapper.model = tf.keras.models.load_model(f"{path}_model.keras")
-    #     return wrapper
+        joblib.dump(self.scalerX, f"{path}/{dir}/scalerX.pkl")
+        joblib.dump(self.scalerY, f"{path}/{dir}/scalerY.pkl")
 
+        np.savez(f"{path}/{dir}/training_files", X_train=self.X_train, X_test=self.X_test, y_train=self.y_train, y_test=self.y_test)
+
+        if self.verbose:
+            print(f"Emulator files saved in {dir}")
+
+    @classmethod
+    def load(cls, dir, path=f"{base_dir}/emulators", load_data=False):
+        scalerX = joblib.load(f"{path}/{dir}/scalerX.pkl")
+        scalerY = joblib.load(f"{path}/{dir}/scalerY.pkl")
+        model = tf.keras.models.load_model(f"{path}/{dir}/model.keras")
+
+        instance = cls(scalerX=scalerX, scalerY=scalerY, model=model)
+
+        if load_data:
+            X_train = np.load(f"{path/{X_train}}")
+            X_test  = np.load(f"{path/{X_test}}")
+            y_train  = np.load(f"{path/{y_train}}")
+            y_test  = np.load(f"{path/{y_test}}")
+
+            instance.X_train = X_train
+            instance.X_test = X_test
+            instance.y_train = y_train
+            instance.y_test = y_test
+
+        return instance
 
 class RandomForest(Emulator):
     def __init__(self, dataset, hyperparameters, features, method='Random Forest', verbose=True):

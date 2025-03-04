@@ -2,6 +2,8 @@ import os
 import re
 import time
 import copy as cp
+import argparse
+import toml
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -11,10 +13,10 @@ import zeus
 from scipy.interpolate import PchipInterpolator, CubicSpline
 
 import alfred.utils as utils
-from alfred.parameters import *
-import alfred.emulator
-import alfred.KSZ
+import alfred.emulator as emulator
+import alfred.KSZ as KSZ
 import alfred.analyse as analyse
+import alfred.surveys as surveys
 
 import joblib
 import tensorflow as tf
@@ -23,150 +25,94 @@ import tensorflow as tf
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 from catwoman.shelter import Cat
 
+from alfred.parameters import *
+from alfred.astrofit import *
+
+
 import argparse
 
-
 def main():
-    home_dir = '/home/emc-brid'  # glx
-    #home_dir = '/Users/emcbride/alfred' # personal ordi
-    # home_dir = '/jet/home' # bridges2
-    data_dir = '/data/cluster/emc-brid'
-
-    #baddies = ['15593', '13492', '13493'] # these don't have redshift files
+    parser = argparse.ArgumentParser(description="Load a config file for setting up an mcmc")
+    parser.add_argument("--config", type=str, help="Name of config file (toml format)")
+   
+    # Parse arguments
+    args = parser.parse_args()
 
     print("Here we go!!!")
 
-    sim_path = '{home_dir}/ps_ee'
-    ion_path = '{home_dir}/ion_histories_full.npz'
-    Pee_path = '{home_dir}/spectra/Pee'
-    kSZ_path = '{home_dir}/spectra/kSZ'
-    fits_path = '{home_dir}/lklhd_files'
-    params_path = '{home_dir}/param_files'
-    redshift_file = '{home_dir}/redshift_list.dat'
+    config = toml.load(f"/Users/emcbride/alfred/scripts/{args.config}")
+    print(f"Now initialising mcmc run {config['title']}...")
 
- 
-    scalerX = joblib.load(f"{data_dir}/emulators/scalerX_LoReLi_style.pkl")
-    scalerY = joblib.load(f"{data_dir}/emulators/scalerY_LoReLi_style.pkl")
-    model = tf.keras.models.load_model(f"{data_dir}/emulators/NN_LoReLi_style_model.keras")
 
-    ells = np.linspace(1,15000, 30)
+    mcmc_dir = f"{base_dir}/inference/mcmc_runs/{config['title']}"
+    print(f"Putting mcmc chains in {mcmc_dir}")
+    os.makedirs(mcmc_dir)
+
     delta_ell = np.diff(ells).mean()
-    ells_error = np.load(f'{home_dir}/ells_for_regressor.npy')
+    lmask = np.where((config['lmin'] < ells) & (ells < config['lmax']))
+    which_params = config['which_params_to_fit']
 
-    df = pd.read_pickle(f'{home_dir}/LoReLi_database_loggedparams.pkl')
-    theta_true =  df[df.columns].mean().to_numpy()
-    datapoints = alfred.emulator.kemu(theta_true, scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
+    if which_params == 'all':
+        which_params = df.columns
 
+    theta_dict = {}
+    for pname in df.columns:
+        theta_dict[pname] = config[pname]
 
-    # a682 = np.load(f'{home_dir}/a682_MLerror.npy')
-    # b682 = np.load(f'{home_dir}/b682_MLerror.npy')
-    errors = np.load(f"{data_dir}/emulators/NN_LoReLi_errors.npy")
-
-    # emu_error_spline = CubicSpline(ells_error, np.maximum(np.abs(a682), b682), bc_type='natural')
-    # emu_error = emu_error_spline(ells)
-    emu_error = np.maximum(np.abs(errors[0]), errors[1])
-
-    labels = df.columns
-    priors = [(df[p].to_numpy().min(), df[p].to_numpy().max()) for p in labels]
-
-    # err_cov = np.diag(sample_var(ells, datapoints, telescope_specs)**2
-    #                     + (noise(ells, telescope_specs, pol=False)/np.sqrt(delta_ell))**2)
-
-    # err_cov_emu = np.diag(sample_var(ells, datapoints, telescope_specs)**2
-    #                     + (noise(ells, telescope_specs, pol=False)/np.sqrt(delta_ell))**2 
-    #                     + (emu_error/np.sqrt(delta_ell))**2)
-
-    err_cov_justemu = np.diag((emu_error/np.sqrt(delta_ell))**2)
-
-    sims = cp.deepcopy(df.index.to_numpy())
-    features = cp.deepcopy(df.to_numpy())
-
-    priors2d = np.load(f'{home_dir}/priors2D_coeffs_logMminvslogtau_v2.npz')
-    pass_prior = np.load(f'{home_dir}/pass_prior.npy')
-
-    def lnprior(theta, priors=priors, priors2d=priors2d, add_2d=True):
-        for i, p in enumerate(priors):
-            low, high = p
-            if not (low <= theta[i] <= high):
-                return -np.inf
-            
-            if add_2d:
-                Mmin = theta[3] # CAREFUL! currently hardcoded (also log10)
-                tau = theta[2]  # CAREFUL! currently hardcoded (also log10)
-
-                below = priors2d['m'] * Mmin + priors2d['b_below']
-                above = priors2d['m'] * Mmin + priors2d['b_above']
-
-                if not(below <= tau <= above):
-                    return -np.inf
-
-        return 0.
+    print(f"data pvals are:")
+    print(theta_dict)
+    # theta_true =  df[df.columns].mean().to_numpy()
+    theta_true = np.asarray(list(theta_dict.values()))
     
-    def lnprob(theta,  data, err, add_2d=True, sn=None):
-        lp = lnprior(theta, add_2d=add_2d)
-        if not np.isfinite(lp):
-            return -np.inf#, 0.
-        ln = lnlike(theta, data, err, sn)
+    datapoints = emulator.kemu(theta_true, **emu,log_data=True)
 
-        return lp + ln #, model
+    err_cov = surveys.error_cov(ells, datapoints, surveys.telescopes[config['survey']])
+    err =np.sqrt(np.diag(err_cov))
 
-    def lnlike(theta, data, err, sn):
-        if not sn:
-            guess_model = alfred.emulator.kemu(theta,
-                            scalerX=scalerX, scalerY=scalerY, model=model, log_data=True)
-            
-            return -0.5 * np.sum((data - guess_model) ** 2.0 / err**2.0)
-
-        elif sn:
-            fn_L = f'{data_dir}/kSZ_LoReLi_simu{sn}.npz'
-            ksz = np.load(fn_L, allow_pickle=True)
-            signal = ksz['kSZ']
-
-        return -0.5 * np.sum((data - signal) ** 2.0 / err**2.0)
-
-
-    chains_fn = "saved_chains.h5"
+    
+    chains_fn = f"{mcmc_dir}/saved_chains.h5"
     save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
-
     autocorr_check = zeus.callbacks.AutocorrelationCallback(ncheck=100, dact=0.01, nact=50, discard=0.5)
     R_check = zeus.callbacks.SplitRCallback(ncheck=100, epsilon=0.01, nsplits=2, discard=0.5)
     miniter_check = zeus.callbacks.MinIterCallback(nmin=500)
 
-    nwalkers = 12
-    burnin = 500
-    nsteps = int(1e6)
-    ndim = len(theta_true)
+    nwalkers = config['nwalkers']
+    burnin = config['burnin']
+    nsteps = config['nsteps']
+    ndim = len(which_params)
 
     #p0 = pass_prior[:12]
     p0 = pass_prior[50:62]
+    p0[6] = pass_prior[52]
     #p0 = pass_prior[100:112]
+    p0 = p0[:,np.where(np.isin(labels, which_params))[0]]
             
     print('Okay, here we go!')
+    print(f"Running the mcmc for {config['title']} on the params:")
+    print(f"\t{config['which_params_to_fit']}...")
+
     start_time = time.time()
 
     sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, np.sqrt(np.diag(err_cov_justemu))])
+                    args=[datapoints, err, theta_true, lmask, which_params])
 
     sampler.run_mcmc(p0, burnin)
-
     burnin_samples = sampler.get_chain()
     start = burnin_samples[-1] # Get the burnin samples
 
     sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, np.sqrt(np.diag(err_cov_justemu))],
-                      moves=zeus.moves.GlobalMove(rescale_cov=.1))
+                    args=[datapoints, err, theta_true, lmask, which_params],
+                    moves=zeus.moves.GlobalMove(config['rescale_cov']))
     sampler.run_mcmc(start, nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
 
 
     end_time = time.time()
 
-    print('finished MCMC, saving files...')
+    print(f'finished MCMC in {(end_time - start_time) / (60 * 60)} hours, saving files in {mcmc_dir}...')
 
-    np.save('burnin', burnin_samples)
-    # np.save('samples', sampler.get_chain())
-    # np.save('logps', sampler.get_log_prob())
-    np.save('tau', autocorr_check.estimates)
-    np.save('R', R_check.estimates)
+    np.save(f'{mcmc_dir}/burnin', burnin_samples)
+    np.save(f'{mcmc_dir}/tau', autocorr_check.estimates)
+    np.save(f'{mcmc_dir}/R', R_check.estimates)
 
     print('Done, YAY!')
 

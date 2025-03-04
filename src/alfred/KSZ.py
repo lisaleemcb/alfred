@@ -21,13 +21,13 @@ from scipy.interpolate import CubicSpline, BSpline, splrep, RegularGridInterpola
 from alfred.parameters import *
 
 
-def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False, dz=dz,
+def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
             Pee_data=None, xe_data=None, z_data=None, k_data=None, alpha0=alpha0, kappa=kappa,
             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False):
         #     kmin=kmin, kmax=kmax, xemin=xemin, xemax=xemax):
     
     KSZ = KSZ_power(verbose=verbose, interpolate_xe=interpolate_xe, interpolate_Pee=interpolate_Pee,
-                helium_interp=helium_interp, debug=debug, alpha0=alpha0, kappa=kappa, dz=dz,
+                helium_interp=helium_interp, debug=debug, alpha0=alpha0, kappa=kappa, 
                 Pee_data=Pee_data, xe_data=xe_data, z_data=z_data, k_data=k_data,
                 xemin=xemin, xemax=xemax, kmin=kmin, kmax=kmax)
     KSZ.run_camb(force=True)
@@ -38,7 +38,7 @@ def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False, dz=dz
 
     print()
     print(f"The end of reionisation is sampled at:")
-    print(f"\t{xe[(xe >= 0.95) & (xe <= 1)]}")
+    print(f"\t{xe[(xe >= 0.8) & (xe < 1.08)]}")
     print()
 
     return spectra# , xe, KSZ.z_integ
@@ -56,7 +56,7 @@ class KSZ_power:
         xe_data=None,
         z_data=None,
         k_data=None,
-        dz=dz,
+        dz=0.15,
         interpolate_Pee=False,
         interpolate_xe=False,
         helium_interp=False,
@@ -368,7 +368,7 @@ class KSZ_power:
             if self.helium2:
                 self.f += self.fHe
         else:
-            self.fHe = 0.0
+            self.fHe = 0.08
         if self.verbose:
             print("Late-time ionisation fraction: %.2f" % self.f)
 
@@ -383,7 +383,11 @@ class KSZ_power:
         self.xemax = xemax
         self.kmin = kmin
         self.kmax = kmax
-        self.z_integ = self.set_zinteg(dz=dz)
+
+        if self.interpolate_xe:
+            self.z_integ = self.set_zinteg(dz=dz)
+        else:
+            self.z_integ = z_integ_fid
 
         dlogkp = 0.05
         self.kp_integ = kp_integ
@@ -456,8 +460,11 @@ class KSZ_power:
                 xod = ((1+self.zre_h)**1.5 - (1+z)**1.5)/deltay
                 frac = (np.tanh(xod)+1.)/2.
 
+            if self.helium:
             # add first He reionisation if needed
-            xe = (1.0 + self.fHe - self.xe_recomb) * frac
+                xe = (1.0 + self.fHe - self.xe_recomb) * frac
+            else:
+                xe = (1.0 - self.xe_recomb) * frac
 
             # add second He reionisation
             if self.helium2:
@@ -592,27 +599,45 @@ class KSZ_power:
                 return i
         return None  # Return None if no such index is found
     
-    def set_zinteg(self, dz=0.15):
-        print(f'dz is {dz}')
+    def find_zpiv(self):
         from scipy.optimize import root_scalar
         # Define the equation f(x) - val1 = 0 to solve for x
+        he_flag = False
+        if self.helium_interp:
+        #    print('Saving flag')
+            he_flag = True
 
+        self.helium_interp = False
         def find_z_xefrac(z_guess):
-            return self.xe(z_guess) - self.xemax
+            return self.xe(z_guess) - (self.xemax)
+        
+#        print(f'bound is {self.z_data[self.xe_data < (self.xemax)].min()}')
 
+        bracket = [4.0, self.z_data[self.xe_data < (self.xemax)].min()]  
+      #  print(f'bracket: {bracket}')
+      #  print(f'find between: {find_z_xefrac(4.0)}, {find_z_xefrac(self.z_data[self.xe_data < self.xemax].min())}')
         # Find x using root_scalar within the x range
-        sol = root_scalar(find_z_xefrac, bracket=[4.0, self.z_data[self.xe_data < self.xemax].min()],
-                                             method='brentq')
+        sol = root_scalar(find_z_xefrac,
+            bracket=bracket, method='brentq')
 
         if not sol.converged:
             print('z_integ has an issue!')
 
-        z_piv = sol.root
+        if he_flag:
+       #     print('Turning back on flag')
+            self.helium_interp = True
 
-        z_pre =  np.logspace(np.log10(z_min), np.log10(z_piv),
-            int((np.log10(z_piv) - np.log10(z_min)) / dlogz) + 1)
+        zpiv = sol.root
+
+        return zpiv
+    
+    def set_zinteg(self, dz):
         
-        z_EOR = np.arange(z_piv + dz, 10.0, step=dz)
+        zpiv = self.find_zpiv()
+        z_pre =  np.logspace(np.log10(z_min), np.log10(zpiv),
+            int((np.log10(zpiv) - np.log10(z_min)) / dlogz) + 1)
+        
+        z_EOR = np.arange(zpiv + dz, 10.0, step=dz)
         z_post = np.arange(10, z_max + 0.5, step=0.5)
 
         z_integ = np.concatenate((z_pre, z_EOR, z_post))
