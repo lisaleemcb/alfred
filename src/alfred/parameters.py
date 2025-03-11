@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 home_dir = '/home/emc-brid'
 #home_dir = '/Users/emcbride'
 #base_dir = f'/Users/emcbride/Datasets/LoReLi'
-base_dir = '/data/cluster/emc-brid'
+base_dir = '/data/cluster/emc-brid/Dataset/LoReLi'
 
 ##########################
 ####  Helpful things  ####
