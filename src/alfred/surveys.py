@@ -1,10 +1,7 @@
 import numpy as np
 import alfred.surveys as surveys
 
-#home_dir = '/home/emc-brid'
-home_dir = '/Users/emcbride'
-base_dir = f'{home_dir}/Datasets/LoReLi'
-#data_dir = '/data/cluster/emc-brid/'
+from alfred.parameters import home_dir, base_dir
 
 
 telescopes ={

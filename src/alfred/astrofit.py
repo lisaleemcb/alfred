@@ -42,6 +42,8 @@ priors = [(df[p].to_numpy().min(), df[p].to_numpy().max()) for p in labels]
 sims = cp.deepcopy(df.index.to_numpy())
 features = cp.deepcopy(df.to_numpy())
 
+print('T')
+
 pass_prior = np.load(f'{base_dir}/inference/priors/pass_prior.npy')
 pass_Planck = np.load(f'{base_dir}/inference/priors/pass_Planckprior.npy')
 
