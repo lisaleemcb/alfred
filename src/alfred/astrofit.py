@@ -14,6 +14,8 @@ from astropy import cosmology, units, constants
 import joblib
 import tensorflow as tf
 
+tf.config.set_visible_devices([], 'GPU')
+
 import alfred.emulator as emulator
 import alfred.surveys as surveys
 from alfred.parameters import *

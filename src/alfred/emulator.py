@@ -16,6 +16,9 @@ from sklearn import metrics
 
 from alfred.parameters import *
 
+
+tf.config.set_visible_devices([], 'GPU')
+
 def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
     if params.ndim == 2:
         X = scalerX.transform(params)

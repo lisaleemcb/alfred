@@ -6,10 +6,11 @@ import matplotlib.pyplot as plt
 #######################################
 ########### System settings ###########
 #######################################
-home_dir = '/home/emc-brid'
-#home_dir = '/Users/emcbride'
-#base_dir = f'/Users/emcbride/Datasets/LoReLi'
-base_dir = '/data/cluster/emc-brid/Datasets/LoReLi'
+# home_dir = '/home/emc-brid'
+# base_dir = '/data/cluster/emc-brid/Datasets/LoReLi'
+
+home_dir = '/Users/emcbride'
+base_dir = '/Users/emcbride/Datasets/LoReLi'
 
 ##########################
 ####  Helpful things  ####
@@ -52,7 +53,7 @@ kmin = k_res[0]
 kmax = 1.5 # To avoid the splitting between the LoReLi spectra and Gorce model at high k
 
 xemin = .01
-xemax = .98
+xemax = .97
 
 
 ##########################

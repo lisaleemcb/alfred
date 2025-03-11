@@ -20,6 +20,7 @@ import alfred.surveys as surveys
 
 import joblib
 import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
 
 
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
