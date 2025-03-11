@@ -31,7 +31,7 @@ add2d = true
 addPlanck = false
 
 # parameters
-which_params_to_fit = 'all'
+which_params_to_fit = ['tau', 'Mmin', 'fesc']
 fX = -2.72
 rHS =  0.50
 tau = 3.44

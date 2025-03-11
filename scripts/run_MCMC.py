@@ -40,7 +40,7 @@ def main():
 
     print("Here we go!!!")
 
-    config = toml.load(f"/Users/emcbride/alfred/scripts/{args.config}")
+    config = toml.load(f"{home_dir}/alfred/scripts/{args.config}")
     print(f"Now initialising mcmc run {config['title']}...")
 
 
