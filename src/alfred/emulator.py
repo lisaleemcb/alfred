@@ -46,6 +46,7 @@ class Emulator:
                  y_train=None,
                  y_test=None,
                  model=None,
+                 uncertainties=None,
                  log_data=True,
                  method='Emulator_Base_Class',
                  verbose=True):
@@ -59,6 +60,10 @@ class Emulator:
         self.y_train = y_train
         self.y_test= y_test
         self.model = model
+        if uncertainties is None:
+            self.uncertainties = np.ones_like(self.dataset[0])
+        elif uncertainties is not None:
+            self.uncertainties = uncertainties
         self.scale_data = scale_data
         self.log_data = log_data
         self.method = method
@@ -122,6 +127,21 @@ class Emulator:
         self.X_test = X_test
         self.y_train = y_train
         self.y_test= y_test
+
+    def descale(self, arr, X_or_y='y'):
+        if X_or_y == 'X':
+            if self.scale_data:
+                arr = self.scalerX.inverse_transform(arr)
+            if self.log_data:
+                arr = 10.0**arr
+            return arr
+        
+        if X_or_y == 'y':
+            if self.scale_data:
+                arr = self.scalerY.inverse_transform(arr)
+            if self.log_data:
+                arr = 10.0**arr
+            return arr
 
        # return X_train, X_test, y_train, y_test
 
@@ -203,65 +223,83 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, dataset, features, hyperparameters,
+    def __init__(self, dataset, features, hyperparameters, uncertainties=None,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
         super().__init__(features=features, dataset=dataset, hyperparameters=hyperparameters,
-                          scale_data=scale_data, log_data=log_data, method=method, verbose=verbose)
+                            uncertainties=uncertainties, scale_data=scale_data, log_data=log_data,
+                            method=method, verbose=verbose)
 
         self.neurons = hyperparameters['neurons']
         self.epochs = hyperparameters['epochs']
 
-    def regress(self):
+    def regress(self, kSZ=True, xe=False):
         if self.verbose:
             print(f"Now running regression with {self.neurons} neurons in the middle layer and {self.epochs} epochs...")
 
         
-        def custom_loss(y_true, y_pred):
-            loss = tf.reduce_mean(tf.losses.binary_crossentropy(y_true, y_pred))
-            return loss + 0.01 * tf.reduce_sum(y_pred)  # Adding a small regularization term as an example
+        if xe:
+            def custom_loss(y_true, y_pred):
+                loss = tf.reduce_mean(tf.losses.binary_crossentropy(y_true, y_pred))
+                return loss + 0.01 * tf.reduce_sum(y_pred)  # Adding a small regularization term as an example
 
 
-        layer_norm = tf.keras.layers.Normalization()
-        layer_norm.adapt(self.X_train)
+            layer_norm = tf.keras.layers.Normalization()
+            layer_norm.adapt(self.X_train)
 
-        nx = self.dataset.shape[1]
-        # Define the model
-        self.model = Sequential([
-            layer_norm,
-            Dense(nx, activation='relu', input_shape=(self.X_train.shape[1],)),
-            Dense(nx, activation='relu'),
-            Dense(nx, activation='relu'),
-            #layers.Dense(nx, activation='relu'),
-            Dense(nx, activation='relu'),
-            Dense(nx, activation='linear')#'softmax' 'sigmoid'
-        ])
+            nx = self.dataset.shape[1]
+            # Define the model
+            self.model = Sequential([
+                layer_norm,
+                Dense(nx, activation='relu', input_shape=(self.X_train.shape[1],)),
+                Dense(nx, activation='relu'),
+                Dense(nx, activation='relu'),
+                #layers.Dense(nx, activation='relu'),
+                Dense(nx, activation='relu'),
+                Dense(nx, activation='linear')#'softmax' 'sigmoid'
+            ])
 
-        #model.compile(optimizer='adam',loss='mse', metrics=['accuracy'])
-        self.model.compile(optimizer='adam',loss='mse', metrics=[tf.keras.metrics.MeanSquaredError()])
-        #model.compile(optimizer='adam', loss=lambda y_true, y_pred: weighted_mse_loss(y_true, y_pred, uncertainty_tensor))
-        # Train the model with validation data
+            self.model.compile(optimizer='adam',loss='mse', metrics=['accuracy'])
+            self.model.compile(optimizer='adam',loss='mse', metrics=[tf.keras.metrics.MeanSquaredError()])
+            self.history = self.model.fit(self.X_train, self.y_train, epochs=600, batch_size=35, validation_data=(self.X_test, self.y_test))
 
-        self.history = self.model.fit(self.X_train, self.y_train, epochs=600, batch_size=35, validation_data=(self.X_test, self.y_test))
+        elif kSZ:
+            def weighted_mse_loss(y_true, y_pred, uncertainty):
+                # Compute squared error
+                squared_error = tf.square(y_true - y_pred)
+                
+                # Weight by uncertainty (inverse of uncertainty)
+                weights = tf.math.reciprocal(uncertainty)  # Higher uncertainty = lower weight
+                
+                # Apply the weights to the squared error
+                weighted_error = squared_error * weights
+                
+                # Return the mean of the weighted error
+                return tf.reduce_mean(weighted_error)
+
+            uncertainty_tensor = tf.convert_to_tensor(self.uncertainties, dtype=tf.float32)
             
-    #     self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
-    #    # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
-    #     self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-    #     self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
-    #     self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-    #     self.model.add(Dense(units=self.dataset.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
-        
-    #     # Compile the model
-    #     self.model.compile(optimizer='RMSprop', loss='mean_squared_error')
-        
-    #     # Train the model
-    #     self.history = self.model.fit(self.X_train, self.y_train,
-    #                                                 epochs=self.epochs,
-    #                                                 batch_size=32,
-    #                                                 validation_data=(self.X_test, self.y_test),
-    #                                                 verbose=0)
-        
+            # Train the model with validation data
+
+            self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
+        # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
+            self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
+            self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
+            self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
+            self.model.add(Dense(units=self.dataset.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
+            
+        #     # Compile the model
+            self.model.compile(optimizer='adam', loss=lambda y_true, y_pred: weighted_mse_loss(y_true, y_pred, uncertainty_tensor))
+            
+            # Train the model
+            self.history = self.model.fit(self.X_train,
+                                            self.y_train,
+                                            epochs=self.epochs,
+                                            batch_size=32,
+                                            validation_data=(self.X_test, self.y_test),
+                                            verbose=0)
+            
         return
                                     
         
@@ -353,6 +391,66 @@ class RandomForest(Emulator):
         print(f"Test loss: {loss}")
 
         return
+
+def xe_emul(zvect, params, emul="keras_xe_emul", plot=False, H_He=1.08):
+
+    '''
+    zvect : vect of z values at which xe should be evaluated [z increasing]
+    params: dict of params values 
+            eg: params = {'fX':-2.71669877 , 
+                          'rHS':0.2        , 
+                           'tau': 3.51074603  , 
+                           'Mmin':9.33       , 
+                           'fesc': 0.275 }
+    Emul: name of the directory containing the keras files
+    allH: means H plus 1st reio of He
+
+    RETURNS: xe values at zvect
+
+    '''
+
+    dir = "/Users/emcbride/Datasets/LoReLi/emulators/xe_emul"
+    # data = np.load(f"{dir}/keras_xe_emul_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
+    # model = keras.models.load_model(f'{dir}/keras_xe_emul')
+
+
+    model = tf.keras.models.load_model('/Users/emcbride/Datasets/LoReLi/emulators/keras_xe_emul.keras')
+    data = np.load("/Users/emcbride/Datasets/LoReLi/emulators/keras_xe_emul_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
+
+    parmeansstd = data.item()["parmeansstd"]
+    zm = data.item()["zm"]    
+    zs = data.item()["zs"]
+    xe_interp = data.item()["xe_int"]
+
+
+    X0_values = np.array([(params[key]-parmeansstd[key]["mean"])/parmeansstd[key]["std"] for key in params.keys()])
+
+
+    Yval = model.predict(X0_values[None,:], verbose=0)
+
+    zval = (Yval.T * zs + zm).flatten()[::-1]
+    x_vals = np.hstack(([1e-1,0.98*zval[0]],zval.flatten()))
+    x_vals = np.hstack((x_vals,[1.02*zval[-1]]))
+
+                    
+    y_vals = np.hstack(([1,1],xe_interp.flatten()[::-1]))
+    y_vals = np.hstack((y_vals,[0.5*y_vals[-1]]))
+
+
+
+    xe_fin = H_He * 10**(np.interp(np.log10(zvect), np.log10(x_vals), np.log10(y_vals), left=np.log10(1), right=-10))
+
+
+    if plot:
+        plt.figure()
+        plt.plot(zvect, xe_fin)
+        plt.xlabel("z")
+        plt.ylabel(r"$x_e$")
+
+
+    return xe_fin
+
+
     
 
 

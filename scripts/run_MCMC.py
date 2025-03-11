@@ -64,11 +64,15 @@ def main():
     # theta_true =  df[df.columns].mean().to_numpy()
     theta_true = np.asarray(list(theta_dict.values()))
     
-    datapoints = emulator.kemu(theta_true, **emu,log_data=True)
+    datapoints = emulator.kemu(theta_true, **emu, log_data=True)
 
     err_cov = surveys.error_cov(ells, datapoints, surveys.telescopes[config['survey']])
     err =np.sqrt(np.diag(err_cov))
 
+    lnprob_prepped = lambda params: lnprob(params, datapoints, err, theta_true, None, which_params,
+            priors=priors, priors2d=priors2d, add2d=config['add2d'],
+            Planck=Planck, addPlanck=config['addPlanck'], emu=emu, sn=None,
+            labels=labels)
     
     chains_fn = f"{mcmc_dir}/saved_chains.h5"
     save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
@@ -81,11 +85,13 @@ def main():
     nsteps = config['nsteps']
     ndim = len(which_params)
 
-    #p0 = pass_prior[:12]
-    p0 = pass_prior[50:62]
-    p0[6] = pass_prior[52]
+    p0 = pass_Planck[:12]
+    # p0 = pass_prior[50:62]
+    # p0[6] = pass_prior[52]
     #p0 = pass_prior[100:112]
     p0 = p0[:,np.where(np.isin(labels, which_params))[0]]
+
+    print(p0)
             
     print('Okay, here we go!')
     print(f"Running the mcmc for {config['title']} on the params:")
@@ -93,18 +99,17 @@ def main():
 
     start_time = time.time()
 
-    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, err, theta_true, lmask, which_params])
+    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob_prepped)
 
     sampler.run_mcmc(p0, burnin)
     burnin_samples = sampler.get_chain()
     start = burnin_samples[-1] # Get the burnin samples
 
-    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob,
-                    args=[datapoints, err, theta_true, lmask, which_params],
+    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob_prepped,
+              #      args=[datapoints, err, theta_true, lmask, which_params],
                     moves=zeus.moves.GlobalMove(config['rescale_cov']))
+    
     sampler.run_mcmc(start, nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
-
 
     end_time = time.time()
 

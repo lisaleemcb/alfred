@@ -8,6 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 import corner
 import zeus
+from scipy.integrate import cumulative_trapezoid
 from astropy import cosmology, units, constants
 
 import joblib
@@ -26,6 +27,8 @@ telescopes ={
     'CMB-HD': {'fsky':0.5, 'fwhm':0.5, 'noise':2.7},
 }
 
+
+delta_ell = np.mean(np.diff(ells))
 Planck = 0.054
 Planck_err = 0.007
 priors2d = np.load(f'{base_dir}/inference/priors/2dpriors.npz')
@@ -40,6 +43,7 @@ sims = cp.deepcopy(df.index.to_numpy())
 features = cp.deepcopy(df.to_numpy())
 
 pass_prior = np.load(f'{base_dir}/inference/priors/pass_prior.npy')
+pass_Planck = np.load(f'{base_dir}/inference/priors/pass_Planckprior.npy')
 
 scalerX = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerX_LoReLi_style.pkl")
 scalerY = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerY_LoReLi_style.pkl")
@@ -48,26 +52,50 @@ emu = {'scalerX': scalerX,
     'scalerY': scalerY,
     'model': model}
 
+ztau = np.linspace(0,20,1000)
+
+def xe2tau(z, xe):
+        """
+        Computes redshift evolution of the model's optical depth.
+
+        Parameters
+        ----------
+            z: (array of) float(s)
+                Redshift range used to compute the optical depth.
+        """
+        cos = cosmology.FlatLambdaCDM(
+            H0=h * 100, Tcmb0=T_cmb, Ob0=Ob_0, Om0=Om_0
+        )
+        z = np.sort(z)
+       # xe = np.sort(xe)[::-1]
+
+        integ = constants.c.value * constants.sigma_T.value * nh * xe / cos.H(z).si.value * (1+z)**2
+        # tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
+        tofz = cumulative_trapezoid(integ, z, initial=0)
+
+        return tofz
 
 
 def lnprior(theta_fit, truths=None, priors=priors, which_params=None,
-                    priors2d=priors2d, add_2d=True,
-                    Planck=Planck, add_Planck=False,
+                    priors2d=priors2d, add2d=True,
+                    Planck=Planck, addPlanck=False,
                     labels=labels, verbose=False):
+
         
-    theta_dict = dict(zip(which_params, theta_fit))
-    theta = cp.deepcopy(truths)
+    theta_dict = dict(zip(labels, truths))
+    for i, key in enumerate(which_params):
+        theta_dict[key] = theta_fit[i]
+
+    theta = list(theta_dict.values())
 
     for i, p in enumerate(priors):
-        if labels[i] in which_params:
-            theta[i] = theta_dict[labels[i]]
         low, high = p
         if not (low <= theta[i] <= high):
             if verbose:
                 print(f'failed 1d check on {i}th parameter')
             return -np.inf
         
-    if add_2d:
+    if add2d:
         Mmin = theta[3] # CAREFUL! currently hardcoded (also log10)
         tau = theta[2]  # CAREFUL! currently hardcoded (also log10)
 
@@ -80,9 +108,11 @@ def lnprior(theta_fit, truths=None, priors=priors, which_params=None,
 
             return -np.inf
         
-    if add_Planck:
-        tau = .054
-        if not ((Planck - Planck_err) <= tau <=(Planck + Planck_err)):
+    if addPlanck:
+        xemu = emulator.xe_emul(ztau, theta_dict, emul="keras_xe_emul", plot=False, H_He=1.08)
+        tau = xe2tau(ztau, xemu)[-1]
+
+        if not ((Planck - 2 * Planck_err) <= tau <=(Planck + 2 * Planck_err)):
             if verbose:
                 print(f'failed Planck tau check')
 
@@ -91,12 +121,12 @@ def lnprior(theta_fit, truths=None, priors=priors, which_params=None,
     return 0.
 
 def lnprob(theta, data, err, truths, lmask, which_params,
-            priors=priors, priors2d=priors2d, add_2d=True,
-            Planck=Planck, add_Planck=False, emu=emu, sn=None,
+            priors=priors, priors2d=priors2d, add2d=True,
+            Planck=Planck, addPlanck=False, emu=emu, sn=None,
             labels=labels):
     
-    lp = lnprior(theta, truths=truths, priors=priors, which_params=which_params, add_2d=add_2d,
-                    Planck=Planck, add_Planck=add_Planck)
+    lp = lnprior(theta, truths=truths, priors=priors, which_params=which_params, add2d=add2d,
+                    Planck=Planck, addPlanck=addPlanck)
     if not np.isfinite(lp):
         return -np.inf#, 0.
     ln = lnlike(theta, data, err, truths, lmask, which_params, sn=sn)

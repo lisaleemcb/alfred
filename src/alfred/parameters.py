@@ -220,7 +220,7 @@ z_min = 0.10
 z_piv = 1.0
 z_max = 20.0
 dlogz = 0.1
-dz = 0.15
+dz = 0.15 / 2.0
 z_integ_fid = np.concatenate(
     (
         np.logspace(

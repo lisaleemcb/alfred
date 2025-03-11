@@ -23,11 +23,11 @@ from alfred.parameters import *
 
 def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
             Pee_data=None, xe_data=None, z_data=None, k_data=None, alpha0=alpha0, kappa=kappa,
-            kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False):
+            kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium=True, helium2=True):
         #     kmin=kmin, kmax=kmax, xemin=xemin, xemax=xemax):
     
     KSZ = KSZ_power(verbose=verbose, interpolate_xe=interpolate_xe, interpolate_Pee=interpolate_Pee,
-                helium_interp=helium_interp, debug=debug, alpha0=alpha0, kappa=kappa, 
+                helium=helium, helium2=helium2, debug=debug, alpha0=alpha0, kappa=kappa, 
                 Pee_data=Pee_data, xe_data=xe_data, z_data=z_data, k_data=k_data,
                 xemin=xemin, xemax=xemax, kmin=kmin, kmax=kmax)
     KSZ.run_camb(force=True)
@@ -56,10 +56,9 @@ class KSZ_power:
         xe_data=None,
         z_data=None,
         k_data=None,
-        dz=0.15,
+        dz=dz,
         interpolate_Pee=False,
         interpolate_xe=False,
-        helium_interp=False,
         helium=False,
         helium2=False,
         xe_recomb=1.0e-4,
@@ -271,7 +270,6 @@ class KSZ_power:
             if z_data is None:
                 raise ValueError("xe interpolation from data requested, which requires a xe and z but missing z")
             # 
-            self.helium_interp = helium_interp
             # perform checks
             if np.all(np.diff(z_data) > 0):
                 if xe_data[-1] > xe_data[0]:
@@ -361,6 +359,7 @@ class KSZ_power:
         # He reionisation
         self.helium = helium
         self.helium2 = helium2
+
         self.f = 1.0
         if self.helium:
             self.fHe = self.Yp / (3.9715 * (1 - self.Yp))
@@ -400,11 +399,9 @@ class KSZ_power:
             print(f'max k: {self.kmax}')
 
         if self.interpolate_xe:
-            xe_max = (1 + self.fHe - self.xe_recomb)
-            if self.helium_interp == True:
-                self.zend_h = np.sort(z3)[np.where(self.xe(z3) >= 1.08)[0][-1]]
-            else:
-                self.zend_h = np.sort(z3)[np.where(self.xe(z3) >= 1.0)[0][-1]] #self.z_data.min()
+             self.zend_h = self.find_zpiv()
+            #self.zend_h = np.sort(z3)[np.where(self.xe(z3) >= 1.08)[0][-1]]
+
         elif self.asym_h_reion:
             self.zend_h = self.zre_h - self.dz_h
         else:
@@ -489,11 +486,11 @@ class KSZ_power:
 
             z_data = np.sort(self.z_data)
             xe_data = np.sort(self.xe_data)[::-1]
-            xe_spline = interp1d(z_data, xe_data, axis=0, fill_value="extrapolate") #CubicSpline(z, xe, axis=0)
+            self.xe_spline = interp1d(z_data, xe_data, axis=0, fill_value="extrapolate") #CubicSpline(z, xe, axis=0)
 
             frac = 1.0 # - self.xe_recomb)
-            xe_He = 0
-            if self.helium_interp:
+            self.xe_He = 0
+            if self.helium:
                 frac = (1.0 + self.fHe - self.xe_recomb)
                 # add second He reionisation
                 if self.helium2:
@@ -508,16 +505,22 @@ class KSZ_power:
                     VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
                     xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
                     tgh2 = np.tanh(xod2)  # check if xod<100
-                    xe_He += (self.fHe - self.xe_recomb) * (tgh2 + 1.0) / 2.0
-                    xe_He = np.where(z < self.z_early, xe_He, 0.0)
+                    self.xe_He += (self.fHe - self.xe_recomb) * (tgh2 + 1.0) / 2.0
+                  #  self.xe_He = np.where(z < self.z_early, self.xe_He, 0.0)
 
-            xe_early = np.where(z > z_data.max(), self.xe_recomb, 0.0)
-            xe_reion = frac * np.where((z <= z_data.max()) & (z >= z_data.min()), xe_spline(z), 0.0)
-            xe_late = np.where(z < z_data.min(), frac, 0.0)
+            self.xe_early = np.where(z > z_data.max(), self.xe_recomb, 0.0)
+            self.xe_reion = frac * np.where((z <= z_data.max()) & (z >= z_data.min()), self.xe_spline(z), 0.0)
+            self.xe_late = np.where(z < z_data.min(), frac, 0.0)
 
-            xe = xe_early + xe_reion + xe_late + xe_He
+            # print(frac)
+            # print(f'early {self.xe_early}')
+            # print(f'reion {self.xe_reion}')
+            # print(f'late {self.xe_late}')
+            # print(f'He {self.xe_He}')
+
+            xe = self.xe_early + self.xe_reion + self.xe_late + self.xe_He
             # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
-            if self.helium_interp:
+            if self.helium:
                 xe = np.where((z < helium_fullreion_redshift - 1) & (xe <= (1.0 + 2 * self.fHe - self.xe_recomb)), (1.0 + 2 * self.fHe - self.xe_recomb), xe)
 
 
@@ -540,7 +543,8 @@ class KSZ_power:
 
         integ = constants.c.value * constants.sigma_T.value * self.nh * xe \
             / cos.H(z).si.value * (1+z)**2
-        tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
+        # tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
+        tofz = cumulative_trapezoid(integ, z, initial=0)
 
         return tofz
 
@@ -602,12 +606,17 @@ class KSZ_power:
     def find_zpiv(self):
         from scipy.optimize import root_scalar
         # Define the equation f(x) - val1 = 0 to solve for x
-        he_flag = False
-        if self.helium_interp:
+        He_flag = False
+        HeII_flag = False
+    
+        if self.helium:
         #    print('Saving flag')
-            he_flag = True
+            He_flag = True
+        if self.helium2:
+            HeII_flag = True
 
-        self.helium_interp = False
+        self.helium = False
+        self.helium2 = False
         def find_z_xefrac(z_guess):
             return self.xe(z_guess) - (self.xemax)
         
@@ -623,9 +632,11 @@ class KSZ_power:
         if not sol.converged:
             print('z_integ has an issue!')
 
-        if he_flag:
+        if He_flag:
        #     print('Turning back on flag')
-            self.helium_interp = True
+            self.helium = True
+        if HeII_flag:
+            self.helium2 = True
 
         zpiv = sol.root
 
@@ -633,14 +644,25 @@ class KSZ_power:
     
     def set_zinteg(self, dz):
         
+        # print(f'dz={dz}')
         zpiv = self.find_zpiv()
         z_pre =  np.logspace(np.log10(z_min), np.log10(zpiv),
             int((np.log10(zpiv) - np.log10(z_min)) / dlogz) + 1)
         
-        z_EOR = np.arange(zpiv + dz, 10.0, step=dz)
+        #print(f"dz={dz}")
+        
+        self.z_EOR = np.arange(zpiv + dz, 10.0, step=dz)
+        # print(f"dz={dz}")
+        # print(f"z_EOR diff is {np.diff(z_EOR)}")
+        # print()
+        # print(z_EOR)
+        # print(self.xe(z_EOR))
+        # print()
         z_post = np.arange(10, z_max + 0.5, step=0.5)
 
-        z_integ = np.concatenate((z_pre, z_EOR, z_post))
+        z_integ = np.concatenate((z_pre, self.z_EOR, z_post))
+
+        # print(f"z_EOR step size is {np.diff(z_EOR)}")
 
         return z_integ
             
@@ -751,8 +773,8 @@ class KSZ_power:
                 (self.z_early - self.zre_h) / (self.z_early - self.zend_h)
             )
 
-        self.tau = self.xe2tau(z3)[0]
-        tauf = interp1d(z3, self.xe2tau(z3))  # interpolation
+        self.tau = self.xe2tau(z3)[-1]
+        tauf = interp1d(z3, self.xe2tau(z3)[::-1])  # interpolation
 
 
         self.x_i_z_integ = self.xe(self.z_integ)  # reionisation history

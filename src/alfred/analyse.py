@@ -28,9 +28,7 @@ def lklhd(pvals, data, model_func, priors, obs_errs, pfit, debug=False):
     for i, p in enumerate(pvals):
         prior_range = priors[i]
 
-        if (p <= prior_range.min()) | (p >= prior_range.max()):
-            if debug:
-                print(f'outside prior range with {model.keys()[i]}={p}')  
+        if (p <= prior_range[0]) | (p >= prior_range[1]):
             return -np.inf
 
 
@@ -140,9 +138,9 @@ class Fit:
         self.verbose = verbose
         self.debug = debug
 
-        self.k = self.sim.k[krange]
-        self.z = self.sim.z[self.zrange]
-        self.xe = self.sim.xe[self.zrange]
+        self.k = self.sim.k[slice(*self.krange)]
+        self.z = self.sim.z[slice(*self.zrange)]
+        self.xe = self.sim.xe[slice(*self.zrange)]
 
         if priors is None:
             self.priors = make_priors(self.params)
@@ -177,7 +175,7 @@ class Fit:
         # initialise data
         #==============================
         if data is None:
-            self.data = sim.Pee[np.ix_(zrange, krange)] # ix_ just makes a correct mesh of zrange, krange
+            self.data = sim.Pee[slice(*zrange), slice(*krange)] # ix_ just makes a correct mesh of zrange, krange
         elif data is not None:
             self.data = data
 
@@ -189,7 +187,7 @@ class Fit:
                                 verbose=self.verbose)
 
         if obs_errs is None:
-            self.obs_errs = self.err_spline(sim.k[krange]) * self.model.spectra
+            self.obs_errs = self.err_spline(sim.k[slice(*krange)]) * self.model.spectra
         elif obs_errs is not None:
             self.obs_errs = obs_errs
 
