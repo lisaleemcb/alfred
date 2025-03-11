@@ -16,8 +16,6 @@ from sklearn import metrics
 
 from alfred.parameters import *
 
-home_dir = 'Users/emcbride'
-
 def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
     if params.ndim == 2:
         X = scalerX.transform(params)
@@ -414,8 +412,8 @@ def xe_emul(zvect, params, emul="keras_xe_emul", plot=False, H_He=1.08):
     # model = keras.models.load_model(f'{dir}/keras_xe_emul')
 
 
-    model = tf.keras.models.load_model('/Users/emcbride/Datasets/LoReLi/emulators/keras_xe_emul.keras')
-    data = np.load("/Users/emcbride/Datasets/LoReLi/emulators/keras_xe_emul_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
+    model = tf.keras.models.load_model(f"{base_dir}/emulators/keras_xe_emul.keras")
+    data = np.load(f"{base_dir}/emulators/keras_xe_emul_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
 
     parmeansstd = data.item()["parmeansstd"]
     zm = data.item()["zm"]    
