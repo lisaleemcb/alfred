@@ -27,6 +27,8 @@ nwalkers = 12
 burnin = 500
 nsteps = 10000
 rescale_cov = 0.1
+add2d = true
+addPlanck = false
 
 # parameters
 which_params_to_fit = ['tau', 'Mmin', 'fesc']
