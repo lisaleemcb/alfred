@@ -22,6 +22,7 @@ import joblib
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
 
+import warnings
 
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 from catwoman.shelter import Cat
@@ -33,6 +34,9 @@ from alfred.astrofit import *
 import argparse
 
 def main():
+    # Suppress all warnings
+    warnings.filterwarnings("ignore")
+
     parser = argparse.ArgumentParser(description="Load a config file for setting up an mcmc")
     parser.add_argument("--config", type=str, help="Name of config file (toml format)")
    
