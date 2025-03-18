@@ -1,13 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from alfred.parameters import base_dir
 
 
 from tensorflow import keras
 
 emul="keras_xe_emul_glx"
+path = f"{base_dir}/emulators/xe_emul"
 
-model = keras.models.load_model('./'+emul+".keras" )
-data = np.load(emul+"_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
+model = keras.models.load_model(f"{path}/{emul}.keras" )
+data = np.load(f"{path}/{emul}_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
 
 
 def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=False):
@@ -27,7 +29,6 @@ def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=
 
     '''
 
-    
 
     parmeansstd = data.item()["parmeansstd"]
     zm = data.item()["zm"]    
@@ -90,9 +91,6 @@ def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=
     return xe_fin
 
 
-
-
-
 def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=True, zHe=3.5, plot=False, newfig=False):
 
     '''
@@ -111,7 +109,10 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
     '''
 
-    nmodels = np.shape(params_array)[1]
+    if params_array.ndim == 1:
+        params_array = params_array.reshape(params_array.size, 1)
+
+    nmodels =  np.shape(params_array)[1]
 
     keys = ['fX', 'rHS','tau', 'Mmin', 'fesc']
     
