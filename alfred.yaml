@@ -23,9 +23,10 @@ dependencies:
   - pip:
       - powerbox
       - anesthetic
-      # - cobaya
+      - cobaya
       # - black
       - git+https://github.com/lisaleemcb/catwoman.git
+      - git clone https://github.com/CMB-HD/hdlike.git
       # - openai
       # - alphadoc
       # - 21cmtools

@@ -415,8 +415,10 @@ def xe_emul(zvect, params, emul="keras_xe_emul", plot=False, H_He=1.08):
     # model = keras.models.load_model(f'{dir}/keras_xe_emul')
 
 
-    model = tf.keras.models.load_model(f"{base_dir}/emulators/keras_xe_emul.keras")
-    data = np.load(f"{base_dir}/emulators/keras_xe_emul_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
+    model = tf.keras.models.load_model(f"/Users/emcbride/alfred/model.keras")
+    # model = tf.keras.models.load_model(f"{base_dir}/emulators/keras_xe_emul.keras")
+    # data = np.load(f"{base_dir}/emulators/keras_xe_emul_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
+    data = np.load(f"pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
 
     parmeansstd = data.item()["parmeansstd"]
     zm = data.item()["zm"]    
