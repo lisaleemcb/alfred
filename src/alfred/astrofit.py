@@ -18,6 +18,7 @@ tf.config.set_visible_devices([], 'GPU')
 
 import alfred.emulator as emulator
 import alfred.surveys as surveys
+import alfred.keras_xe_emul as keras_xe_emul
 from alfred.parameters import *
 from alfred.utils import get_sims
 
@@ -113,7 +114,8 @@ def lnprior(theta_fit, truths=None, priors=priors, which_params=None,
             return -np.inf
         
     if addPlanck:
-        xemu = emulator.xe_emul(ztau, theta_dict, emul="keras_xe_emul", plot=False, H_He=1.08)
+        ztau = np.linspace(0,20,100)
+        xemu = keras_xe_emul.xe_emul_array(ztau, np.asarray(theta), plot=False)
         tau = xe2tau(ztau, xemu)[-1]
 
         if not ((Planck - 2 * Planck_err) <= tau <=(Planck + 2 * Planck_err)):

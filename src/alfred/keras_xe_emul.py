@@ -188,5 +188,9 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
             plt.xlabel("z")
             plt.ylabel(r"$x_e$")
 
+    xe_final = np.asarray(xe_final)
 
-    return np.array(xe_final)
+    if 1 in xe_final.shape:
+        return np.array(xe_final).flatten()
+
+    return xe_final
