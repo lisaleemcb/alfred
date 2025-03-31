@@ -77,7 +77,7 @@ class Emulator:
         self.history = None
         self.scaler = None
 
-    def prep_data(self, nells=30):
+    def prep_data(self, splits=None, nells=30):
         """Describes the class."""
         
         if self.verbose:
@@ -105,11 +105,14 @@ class Emulator:
         #     print(f'Prepped data')
         #     print(f'{samples.shape} samples')
         #     print(f'{self.params[:,self.pn].shape} features')
-            
-        X_train, X_test, y_train, y_test = train_test_split(self.features,
-                                                            self.dataset,
-                                                            test_size=0.2,
-                                                            random_state=42)
+
+        if splits is None:
+            X_train, X_test, y_train, y_test = train_test_split(self.features,
+                                                                self.dataset,
+                                                                test_size=0.2,
+                                                                random_state=42)
+        elif splits is not None:
+            X_train, X_test, y_train, y_test = splits
 
         if self.scale_data:
             if self.verbose:
@@ -324,6 +327,7 @@ class NeuralNetwork(Emulator):
         return y
     
     def save(self, dir, path=f"{base_dir}/emulators"):
+        print(base_dir)
         os.makedirs(f"{path}/{dir}")
         self.model.save(f"{path}/{dir}/model.keras")
 
