@@ -546,8 +546,7 @@ class KSZ_power:
 
         integ = constants.c.value * constants.sigma_T.value * self.nh * xe \
             / cos.H(z).si.value * (1+z)**2
-        # tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
-        tofz = cumulative_trapezoid(integ, z, initial=0)
+        tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
 
         return tofz
 
@@ -683,7 +682,7 @@ class KSZ_power:
                 )
             self.run_camb()
 
-        xe = self.xe(z)
+        xe = self.xe(z, just_H=True)
 
         if not self.interpolate_Pee: 
             if self.debug:
@@ -721,7 +720,7 @@ class KSZ_power:
         mask_z = (z >= self.zmin) & (z <= self.zmax)
         mask_z = mask_z.astype(int)
 
-        mask_xe = (self.xe(z, just_H=True) >= self.xemin) & (self.xe(z, just_H=True) <= self.xemax)
+        mask_xe = (xe >= self.xemin) & ((xe <= self.xemax) | np.isclose(xe, self.xemax, atol=1e-6))
         mask_xe = mask_xe.astype(int)
 
         if self.debug:
@@ -760,8 +759,8 @@ class KSZ_power:
                 (self.z_early - self.zre_h) / (self.z_early - self.zend_h)
             )
 
-        self.tau = self.xe2tau(z3)[-1]
-        tauf = interp1d(z3, self.xe2tau(z3)[::-1])  # interpolation
+        self.tau = self.xe2tau(z3)[0]
+        tauf = interp1d(z3, self.xe2tau(z3))  # interpolation
 
 
         self.x_i_z_integ = self.xe(self.z_integ)  # reionisation history
