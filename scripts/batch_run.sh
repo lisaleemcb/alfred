@@ -26,5 +26,5 @@ source ~/venvs/alfred/bin/activate
 echo "Running with sims contained in file ${sims}"
 
 # Run the program with the generated input file
-python -u /home/emc-brid/alfred/scripts/make_kSZ.py --sims /home/emc-brid/${sims} --save_dir nells30_v3.1 -n $SLURM_ARRAY_TASK_ID
+python -u /home/emc-brid/alfred/scripts/make_kSZ.py --sims /home/emc-brid/${sims} --save_dir nells30_v3.1 --n $SLURM_ARRAY_TASK_ID
 
