@@ -21,6 +21,7 @@ def main():
     parser = argparse.ArgumentParser(description="Load a numpy file which is a list of sims and save to a directory.")
     parser.add_argument("--sims", type=str, help="Path to the numpy file (.npy or .npz) with the sims to parse")
     parser.add_argument("--save_dir", type=str, help="Directory name for where to save the kSZ spectra")
+    parser.add_argument("--n", type=str, help="Integer which just keeps track of which slurm index this is running")
     
     # Parse arguments
     args = parser.parse_args()
@@ -91,6 +92,8 @@ def main():
         print(f"Folder created: {save_dir}")
     else:
         print(f"Folder already exists: {save_dir}") 
+
+    print(f"Running through sims in {args.n}th file")
 
     sims_nan = []
     sims_failedreion = []
@@ -192,9 +195,8 @@ def main():
         #             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
         
         Dell = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
-                    Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, alpha0=KSZ_params['alpha0'],
-                    kappa=KSZ_params['kappa'], helium=True, helium2=True,
-                    kmin=k[0], kmax=3000, xemin=0.0, xemax=.97, verbose=True)
+                    Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, helium=True, helium2=True,
+                    kmin=k[0], kmax=k[-1], xemin=0.0, xemax=.97, verbose=True)
         
         print()
         
@@ -207,8 +209,8 @@ def main():
         print(f"One kSZ run took {(end_time - start_time) / 60.0 :.3f} minutes")
         print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
 
-    np.save('sims_nan', sims_nan)
-    np.save('sims_failedreion', sims_failedreion)
+    np.save(f'sims_nan_{args.n}', sims_nan)
+    np.save(f'sims_failedreion_{args.n}', sims_failedreion)
     print('Done, YAY!')
 
 if __name__ == "__main__":
