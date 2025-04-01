@@ -68,6 +68,11 @@ def main():
     print(theta_dict)
     # theta_true =  df[df.columns].mean().to_numpy()
     theta_true = np.asarray(list(theta_dict.values()))
+
+    if config['emu'] == 'v2':
+        emu = emu_v2
+    elif config['emu'] == 'v3':
+        emu = emu_v3
     
     datapoints = emulator.kemu(theta_true, **emu, log_data=True)
 
@@ -101,6 +106,7 @@ def main():
     print('Okay, here we go!')
     print(f"Running the mcmc for {config['title']} on the params:")
     print(f"\t{config['which_params_to_fit']}...")
+    print(f"fitting tau prior is {config['addPlanck']}...")
 
     start_time = time.time()
 

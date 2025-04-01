@@ -17,10 +17,14 @@ params_dir = 'param_files'
 ion_fn = 'metadata/ion_histories_full.npz'
 redshift_fn = 'metadata/redshift_list.dat'
 
+
 # data config
 survey = 'CMB-HD'
 lmin = 1000
 lmax = 15000
+
+# emulator
+emu = 'v2'
 
 # mcmc
 nwalkers = 12

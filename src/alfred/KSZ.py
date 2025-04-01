@@ -23,18 +23,18 @@ from alfred.parameters import *
 
 def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
             Pee_data=None, xe_data=None, z_data=None, k_data=None, alpha0=alpha0, kappa=kappa,
-            kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium=True, helium2=True):
+            kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, dz=dz, verbose=True, helium=True, helium2=True):
         #     kmin=kmin, kmax=kmax, xemin=xemin, xemax=xemax):
     
     KSZ = KSZ_power(verbose=verbose, interpolate_xe=interpolate_xe, interpolate_Pee=interpolate_Pee,
                 helium=helium, helium2=helium2, debug=debug, alpha0=alpha0, kappa=kappa, 
                 Pee_data=Pee_data, xe_data=xe_data, z_data=z_data, k_data=k_data,
-                xemin=xemin, xemax=xemax, kmin=kmin, kmax=kmax)
+                xemin=xemin, xemax=xemax, kmin=kmin, kmax=kmax, dz=dz)
     KSZ.run_camb(force=True)
     KSZ.init_reionisation_history()
 
     spectra = KSZ.run_ksz(ells=ells, patchy=True, Dells=True)[:,0]
-    xe = KSZ.xe(KSZ.z_integ)
+    xe = KSZ.xe(KSZ.z_integ, just_H=True)
 
     print()
     print(f"The end of reionisation is sampled at:")
@@ -429,7 +429,7 @@ class KSZ_power:
         if run_camb:
             self.run_camb()
 
-    def xe(self, z):
+    def xe(self, z, just_H=False):
         """
         Computes model's reionisation history.
 
@@ -518,6 +518,9 @@ class KSZ_power:
             # print(f'late {self.xe_late}')
             # print(f'He {self.xe_He}')
 
+            if just_H:
+                return self.xe_early + (self.xe_reion + self.xe_late) / frac
+
             xe = self.xe_early + self.xe_reion + self.xe_late + self.xe_He
             # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
             if self.helium:
@@ -543,8 +546,7 @@ class KSZ_power:
 
         integ = constants.c.value * constants.sigma_T.value * self.nh * xe \
             / cos.H(z).si.value * (1+z)**2
-        # tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
-        tofz = cumulative_trapezoid(integ, z, initial=0)
+        tofz = cumulative_trapezoid(integ[::-1], z, initial=0)[::-1]
 
         return tofz
 
@@ -606,19 +608,9 @@ class KSZ_power:
     def find_zpiv(self):
         from scipy.optimize import root_scalar
         # Define the equation f(x) - val1 = 0 to solve for x
-        He_flag = False
-        HeII_flag = False
-    
-        if self.helium:
-        #    print('Saving flag')
-            He_flag = True
-        if self.helium2:
-            HeII_flag = True
 
-        self.helium = False
-        self.helium2 = False
         def find_z_xefrac(z_guess):
-            return self.xe(z_guess) - (self.xemax)
+            return self.xe(z_guess, just_H=True) - self.xemax
         
 #        print(f'bound is {self.z_data[self.xe_data < (self.xemax)].min()}')
 
@@ -631,12 +623,6 @@ class KSZ_power:
 
         if not sol.converged:
             print('z_integ has an issue!')
-
-        if He_flag:
-       #     print('Turning back on flag')
-            self.helium = True
-        if HeII_flag:
-            self.helium2 = True
 
         zpiv = sol.root
 
@@ -696,7 +682,7 @@ class KSZ_power:
                 )
             self.run_camb()
 
-        xe = self.xe(z)
+        xe = self.xe(z, just_H=True)
 
         if not self.interpolate_Pee: 
             if self.debug:
@@ -734,7 +720,7 @@ class KSZ_power:
         mask_z = (z >= self.zmin) & (z <= self.zmax)
         mask_z = mask_z.astype(int)
 
-        mask_xe = (self.xe(z) >= self.xemin) & (self.xe(z) <= self.xemax)
+        mask_xe = (xe >= self.xemin) & ((xe <= self.xemax) | np.isclose(xe, self.xemax, atol=1e-6))
         mask_xe = mask_xe.astype(int)
 
         if self.debug:
@@ -773,8 +759,8 @@ class KSZ_power:
                 (self.z_early - self.zre_h) / (self.z_early - self.zend_h)
             )
 
-        self.tau = self.xe2tau(z3)[-1]
-        tauf = interp1d(z3, self.xe2tau(z3)[::-1])  # interpolation
+        self.tau = self.xe2tau(z3)[0]
+        tauf = interp1d(z3, self.xe2tau(z3))  # interpolation
 
 
         self.x_i_z_integ = self.xe(self.z_integ)  # reionisation history
