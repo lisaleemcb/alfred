@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 #######################################
 ########### System settings ###########
 #######################################
-home_dir = '/home/emc-brid'
-base_dir = '/data/cluster/emc-brid/Datasets/LoReLi'
+# home_dir = '/home/emc-brid'
+# base_dir = '/data/cluster/emc-brid/Datasets/LoReLi'
 
-# home_dir = '/Users/emcbride'
-# base_dir = '/Users/emcbride/Datasets/LoReLi'
+home_dir = '/Users/emcbride'
+base_dir = '/Users/emcbride/Datasets/LoReLi'
 
 ##########################
 ####  Helpful things  ####

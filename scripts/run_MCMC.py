@@ -73,6 +73,8 @@ def main():
         emu = emu_v2
     elif config['emu'] == 'v3':
         emu = emu_v3
+    elif config['emu'] == 'v3.1':
+        emu = emu_v3p1
     
     datapoints = emulator.kemu(theta_true, **emu, log_data=True)
 
@@ -107,6 +109,7 @@ def main():
     print(f"Running the mcmc for {config['title']} on the params:")
     print(f"\t{config['which_params_to_fit']}...")
     print(f"fitting tau prior is {config['addPlanck']}...")
+    print(f"using emulator version {config['emu']}")
 
     start_time = time.time()
 

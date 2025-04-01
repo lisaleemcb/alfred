@@ -1,4 +1,4 @@
-title = 'SO-LAT'
+title = 'fixXrays_v3'
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -17,13 +17,14 @@ params_dir = 'param_files'
 ion_fn = 'metadata/ion_histories_full.npz'
 redshift_fn = 'metadata/redshift_list.dat'
 
+
 # data config
-survey = 'SO-LAT'
-lmin = 1500
+survey = 'CMB-HD'
+lmin = 1000
 lmax = 15000
 
 # emulator
-emu = 'v2'
+emu = 'v3'
 
 # mcmc
 nwalkers = 12
@@ -40,3 +41,4 @@ rHS =  0.50
 tau = 3.44
 Mmin = 8.80
 fesc = 0.27
+

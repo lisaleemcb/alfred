@@ -22,6 +22,9 @@ survey = 'SO-LAT'
 lmin = 1000
 lmax = 15000
 
+# emulator
+emu = 'v3'
+
 # mcmc
 nwalkers = 12
 burnin = 500

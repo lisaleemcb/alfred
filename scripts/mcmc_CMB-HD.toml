@@ -22,6 +22,9 @@ survey = 'CMB-HD'
 lmin = 1000
 lmax = 15000
 
+# emulator
+emu = 'v2'
+
 # mcmc
 nwalkers = 12
 burnin = 500
