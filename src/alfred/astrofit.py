@@ -117,7 +117,7 @@ def lnprior(theta, truths, priors,
     return np.where(passes, 0, -np.inf)
 
 def lnprob(guess, model, data, err, truths, priors,
-            which_params='all',
+            which_params='all', vectorize=False,
             priors2d=priors2d, add2d=True,
             Planck=Planck, addPlanck=False):
 
@@ -127,22 +127,24 @@ def lnprob(guess, model, data, err, truths, priors,
     theta_dict = cp.deepcopy(truths)
     # this seems complicated but it works even when the listed params are out of order
 
-    if which_params == 'all':
+    if np.any(which_params == 'all'):
         which_params = list(truths.keys())
 
-    plist = []
+    theta = np.zeros((guess.shape[0], len(truths)))
+
+    print(theta)
+
     for i, key in enumerate(truths.keys()):
         if key in which_params:
-            parr = guess[:,i]
-
+            print(key)
+            print(which_params.index(key))
+            theta[:,i] = guess[:,which_params.index(key)]
         else:
-            parr = np.ones(guess.shape[0])
-            parr *= truths[key]
+            print(key)
+            theta[:,i] = np.ones(guess.shape[0])
+            theta[:,i] *= truths[key]
 
-        plist.append(parr)
-
-
-    theta = np.column_stack(plist) #.reshape(guess.shape)
+    print(theta)
 
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
@@ -152,6 +154,9 @@ def lnprob(guess, model, data, err, truths, priors,
     # if not np.isfinite(lp):
     #     return -np.inf#, 0.
     ln = lnlike(theta, model, data, err)
+
+    if not vectorize:
+        return (lp + ln)[0]
 
     return lp + ln #, model
 
