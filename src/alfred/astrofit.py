@@ -110,16 +110,19 @@ def lnprior(theta, truths, priors,
         xemu = keras_xe_emul.xe_emul_array(ztau, theta, plot=False)
         tau = xe2tau(ztau, xemu)[:,-1]
 
-        passPlanck =  np.all((Planck - 2*Planck_err) <= tau <=(Planck + 2*Planck_err), axis=1)
+        passPlanck =  ((Planck - 2*Planck_err) <= tau) & (tau <= (Planck + 2*Planck_err))
 
     passes = pass1d & pass2d & passPlanck
 
     return np.where(passes, 0, -np.inf)
 
 def lnprob(guess, model, data, err, truths, priors,
-            which_params='all', vectorize=False,
+            which_params='all',
             priors2d=priors2d, add2d=True,
             Planck=Planck, addPlanck=False):
+
+    if guess.ndim == 1:
+        guess = guess[None,:]
     
     theta_dict = cp.deepcopy(truths)
     # this seems complicated but it works even when the listed params are out of order
@@ -127,18 +130,29 @@ def lnprob(guess, model, data, err, truths, priors,
     if which_params == 'all':
         which_params = list(truths.keys())
 
-    for i, key in enumerate(which_params):
-        theta_dict[key] = guess[i]
+    plist = []
+    for i, key in enumerate(truths.keys()):
+        if key in which_params:
+            parr = guess[:,i]
 
-    theta = np.asarray(list(theta_dict.values()))
-    
+        else:
+            parr = np.ones(guess.shape[0])
+            parr *= truths[key]
+
+        plist.append(parr)
+
+
+    theta = np.column_stack(plist) #.reshape(guess.shape)
+
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
                 Planck=Planck, addPlanck=addPlanck)
+
     
-    if not np.isfinite(lp):
-        return -np.inf#, 0.
+    # if not np.isfinite(lp):
+    #     return -np.inf#, 0.
     ln = lnlike(theta, model, data, err)
+
     return lp + ln #, model
 
 def lnlike(theta, model, data, err):

@@ -127,8 +127,6 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
     X0_values = np.array([(params_array[i,:]-parmeansstd[keys[i]]["mean"])/parmeansstd[keys[i]]["std"] for i in np.arange(params_array.shape[0])])
 
-    
-
     Yval = model.predict(X0_values.T,verbose = 0)
 
     zval = (Yval.T * zs + zm)[::-1]
@@ -192,7 +190,7 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
     xe_final = np.asarray(xe_final)
 
-    if 1 in xe_final.shape:
-        return np.array(xe_final).flatten()
+    # if 1 in xe_final.shape:
+    #     return np.array(xe_final).flatten()
 
     return xe_final
