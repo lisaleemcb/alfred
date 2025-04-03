@@ -22,6 +22,7 @@ redshift_fn = 'metadata/redshift_list.dat'
 survey = 'CMB-HD'
 lmin = 1000
 lmax = 15000
+addnoise = false
 
 # emulator
 emu = 'v2'

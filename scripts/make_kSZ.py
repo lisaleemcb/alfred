@@ -8,7 +8,7 @@ import matplotlib
 import alfred.utils as utils
 from alfred.parameters import *
 import alfred.KSZ
-import alfred.analyse as analyse
+import alfred.peefit as peefit
 
 from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 from catwoman.shelter import Cat

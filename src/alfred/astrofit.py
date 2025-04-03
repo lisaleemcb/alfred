@@ -86,94 +86,66 @@ def xe2tau(z, xe):
         return tofz
 
 
-def lnprior(theta_fit, truths=None, priors=priors, which_params=None,
-                    priors2d=priors2d, add2d=True,
-                    Planck=Planck, addPlanck=False,
-                    labels=labels, verbose=False):
+def lnprior(theta, truths, priors,
+            priors2d=priors2d, add2d=True,
+            Planck=Planck, addPlanck=False,
+            verbose=False):
 
-        
-    theta_dict = dict(zip(labels, truths))
-    for i, key in enumerate(which_params):
-        theta_dict[key] = theta_fit[i]
+    pass1d = np.all((priors[:,0] <= theta) & (priors[:,1] >= theta), axis=1)
+    pass2d = np.ones_like(pass1d, dtype=bool)
+    passPlanck = np.ones_like(pass1d, dtype=bool)
 
-    theta = list(theta_dict.values())
-
-    for i, p in enumerate(priors):
-        low, high = p
-        if not (low <= theta[i] <= high):
-            if verbose:
-                print(f'failed 1d check on {i}th parameter')
-            return -np.inf
-        
     if add2d:
-        Mmin = theta[3] # CAREFUL! currently hardcoded (also log10)
-        tau = theta[2]  # CAREFUL! currently hardcoded (also log10)
+        Mmin = theta[:,3] # CAREFUL! currently hardcoded (also log10)
+        tau = theta[:,2]  # CAREFUL! currently hardcoded (also log10)
 
         below = priors2d['m'] * Mmin + priors2d['b_below']
         above = priors2d['m'] * Mmin + priors2d['b_above']
 
-        if not(below <= tau <= above):
-            if verbose:
-                print('failed 2d check')
-
-            return -np.inf
-        
-    if addPlanck:
-        print('I am checking the tau prior!')
-        ztau = np.linspace(0,20,100)
-        xemu = keras_xe_emul.xe_emul_array(ztau, np.asarray(theta), plot=False)
-        tau = xe2tau(ztau, xemu)[-1]
-
-        if not ((Planck - 2 * Planck_err) <= tau <=(Planck + 2 * Planck_err)):
-            if verbose:
-                print(f'failed Planck tau check')
-
-            return -np.inf
-
-    return 0.
-
-def lnprob(theta, data, err, truths, lmask, which_params,
-            priors=priors, priors2d=priors2d, add2d=True,
-            Planck=Planck, addPlanck=False, emu=None, sn=None,
-            labels=labels):
+        pass2d =  (below <= tau) & (tau <= above)
     
-    lp = lnprior(theta, truths=truths, priors=priors, which_params=which_params, add2d=add2d,
-                    Planck=Planck, addPlanck=addPlanck)
+    if addPlanck:
+        if verbose:
+            print('I am checking the tau prior!')
+        xemu = keras_xe_emul.xe_emul_array(ztau, theta, plot=False)
+        tau = xe2tau(ztau, xemu)[:,-1]
+
+        passPlanck =  np.all((Planck - 2*Planck_err) <= tau <=(Planck + 2*Planck_err), axis=1)
+
+    passes = pass1d & pass2d & passPlanck
+
+    return np.where(passes, 0, -np.inf)
+
+def lnprob(guess, model, data, err, truths, priors,
+            which_params='all', vectorize=False,
+            priors2d=priors2d, add2d=True,
+            Planck=Planck, addPlanck=False):
+    
+    theta_dict = cp.deepcopy(truths)
+    # this seems complicated but it works even when the listed params are out of order
+
+    if which_params == 'all':
+        which_params = list(truths.keys())
+
+    for i, key in enumerate(which_params):
+        theta_dict[key] = guess[i]
+
+    theta = np.asarray(list(theta_dict.values()))
+    
+    lp = lnprior(theta, truths, priors,
+                priors2d=priors2d, add2d=add2d,
+                Planck=Planck, addPlanck=addPlanck)
+    
     if not np.isfinite(lp):
         return -np.inf#, 0.
-    ln = lnlike(theta, data, err, truths, lmask, which_params, emu=emu, sn=sn)
+    ln = lnlike(theta, model, data, err)
     return lp + ln #, model
 
-def lnlike(theta_fit, data, err, truths, lmask, which_params, emu=None, sn=None,
-           labels=labels):
-    
-    if lmask is None:
-        lmask = range(data.size) # want every ell in this case
+def lnlike(theta, model, data, err):
 
-    if not sn:
-        theta_dict = dict(zip(which_params, theta_fit))
+    test = model(theta)
+    return -0.5 * ((data - test) ** 2.0 / err**2.0).sum(axis=1)
 
-        if truths is not None:
-            theta = cp.deepcopy(truths)
-        elif truths is None:
-            theta = cp.deepcopy(theta_fit)
-
-        for i, p in enumerate(priors):
-            if labels[i] in which_params:
-             #   print(f'{labels[i]} is in')
-                theta[i] = theta_dict[labels[i]]
-
-        guess_model = emulator.kemu(theta, **emu)
-        
-        return -0.5 * np.sum((data[lmask] - guess_model[lmask]) ** 2.0 / err[lmask]**2.0)
-
-    elif sn:
-        fn_L = f'{home_dir}/spectra/kSZ/LoReLi/nells30/kSZ_LoReLi_simu{sn}.npz'
-        ksz = np.load(fn_L, allow_pickle=True)
-        signal = ksz['kSZ']
-
-        return -0.5 * np.sum((data[lmask] - signal[lmask]) ** 2.0 / err[lmask]**2.0)
-    
 
 def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
     if lmask is None:
