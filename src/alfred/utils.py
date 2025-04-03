@@ -6,7 +6,7 @@ import numpy as np
 import copy as cp
 
 from scipy.interpolate import CubicSpline
-from alfred.parameters import modelparams_Gorce2022
+from alfred.parameters import modelparams_Gorce2022, base_dir
 
 
 __author__ = "Lisa McBride"
@@ -136,6 +136,13 @@ def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir='/Users/emcbride/Datase
     print(f'{len(sims)} sims available')
 
     return sims
+
+def spectra(sn, dir='nells30_v3.1', basedir=base_dir, prefix='kSZ_LoReLi'):
+    fn = f"{base_dir}/{dir}/{prefix}_simu{sn}.npz"
+    f = np.load(fn, allow_pickle=True)
+
+    return f['Dell']
+    
 
 def smooth_Pee(sim):
     k = []

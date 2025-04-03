@@ -109,6 +109,8 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
     '''
 
+    params_array = params_array.T # this is to fit with the expected array shape
+
     if params_array.ndim == 1:
         params_array = params_array.reshape(params_array.size, 1)
 

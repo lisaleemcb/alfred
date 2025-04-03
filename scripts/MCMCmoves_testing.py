@@ -14,7 +14,7 @@ import alfred.utils as utils
 from alfred.parameters import *
 from alfred.emulator import kemu
 import alfred.KSZ
-import alfred.analyse as analyse
+import alfred.peefit as peefit
 
 import joblib
 import tensorflow as tf

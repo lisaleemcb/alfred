@@ -15,7 +15,7 @@ from scipy.interpolate import PchipInterpolator, CubicSpline
 import alfred.utils as utils
 import alfred.emulator as emulator
 import alfred.KSZ as KSZ
-import alfred.analyse as analyse
+import alfred.peefit as peefit
 import alfred.surveys as surveys
 
 import joblib
@@ -77,14 +77,19 @@ def main():
         emu = emu_v3p1
     
     datapoints = emulator.kemu(theta_true, **emu, log_data=True)
+    truths = dict(zip(df.columns, theta_true))
 
     err_cov = surveys.error_cov(ells, datapoints, surveys.telescopes[config['survey']])
     err =np.sqrt(np.diag(err_cov))
 
-    lnprob_prepped = lambda params: lnprob(params, datapoints, err, theta_true, None, which_params,
-            priors=priors, priors2d=priors2d, add2d=config['add2d'],
-            Planck=Planck, addPlanck=config['addPlanck'], emu=emu, sn=None,
-            labels=labels)
+    if config['addnoise'] == True:
+        datapoints = datapoints + np.random.normal(err)
+
+    model = lambda p: emulator.kemu(p, **emu)
+    lnprob_prepped = lambda params: lnprob(params, model, datapoints, err, truths, priors,
+            which_params=which_params,
+            priors2d=priors2d, add2d=config['add2d'],
+            Planck=Planck, addPlanck=config['addPlanck'])
     
     chains_fn = f"{mcmc_dir}/saved_chains.h5"
     save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
