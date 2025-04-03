@@ -41,7 +41,7 @@ xe_histories = np.load(f'{base_dir}/metadata/ion_histories_full.npz', allow_pick
 xe_histories = xe_histories['arr_0'].item()
 
 labels = df.columns
-priors = [(df[p].to_numpy().min(), df[p].to_numpy().max()) for p in labels]
+priors = np.stack([df.to_numpy().min(axis=0), df.to_numpy().max(axis=0)]).T
 sims = cp.deepcopy(df.index.to_numpy())
 features = cp.deepcopy(df.to_numpy())
 
@@ -132,19 +132,12 @@ def lnprob(guess, model, data, err, truths, priors,
 
     theta = np.zeros((guess.shape[0], len(truths)))
 
-    print(theta)
-
     for i, key in enumerate(truths.keys()):
         if key in which_params:
-            print(key)
-            print(which_params.index(key))
             theta[:,i] = guess[:,which_params.index(key)]
         else:
-            print(key)
             theta[:,i] = np.ones(guess.shape[0])
             theta[:,i] *= truths[key]
-
-    print(theta)
 
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
