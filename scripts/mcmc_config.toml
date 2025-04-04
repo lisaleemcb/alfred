@@ -21,6 +21,7 @@ redshift_fn = 'metadata/redshift_list.dat'
 survey = 'SO-LAT'
 lmin = 1000
 lmax = 15000
+addnoise = false
 
 # emulator
 emu = 'v3'
@@ -32,6 +33,7 @@ nsteps = 10000
 rescale_cov = 0.1
 add2d = true
 addPlanck = false
+vectorize = true
 
 # parameters
 which_params_to_fit = 'all'

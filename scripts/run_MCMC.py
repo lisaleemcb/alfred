@@ -43,14 +43,16 @@ def main():
     # Parse arguments
     args = parser.parse_args()
 
-    print("Here we go!!!")
+    print('========================================================')
+    print("HELLO, WELCOME TO YOUR MCMC RUN!")
+    print('========================================================')
 
     config = toml.load(f"{home_dir}/alfred/scripts/{args.config}")
     print(f"Now initialising mcmc run {config['title']}...")
-
+    print()
 
     mcmc_dir = f"{base_dir}/inference/mcmc_runs/{config['title']}"
-    print(f"Putting mcmc chains in {mcmc_dir}")
+    print(f"putting mcmc chains in {mcmc_dir}...")
     os.makedirs(mcmc_dir)
 
     delta_ell = np.diff(ells).mean()
@@ -64,7 +66,7 @@ def main():
     for pname in df.columns:
         theta_dict[pname] = config[pname]
 
-    print(f"data pvals are:")
+    print(f"simulating data with the parameter values:")
     print(theta_dict)
     # theta_true =  df[df.columns].mean().to_numpy()
     theta_true = np.asarray(list(theta_dict.values()))
@@ -75,7 +77,8 @@ def main():
         emu = emu_v3
     elif config['emu'] == 'v3.1':
         emu = emu_v3p1
-    
+
+    print(f"using emulator version {config['emu']}...")
     datapoints = emulator.kemu(theta_true, **emu, log_data=True)
     truths = dict(zip(df.columns, theta_true))
 
@@ -83,13 +86,20 @@ def main():
     err =np.sqrt(np.diag(err_cov))
 
     if config['addnoise'] == True:
-        datapoints = datapoints + np.random.normal(err)
+        print(f"adding noise to simulated data...")
+        datapoints = datapoints + np.random.normal(scale=err)
+
+    np.savez(f"{mcmc_dir}/data", truths=truths, datapoints=datapoints, err=err)
+
+    print()
+    print(f"Running the mcmc for {config['title']} on the params:")
+    print(f"\t{config['which_params_to_fit']}...")
 
     model = lambda p: emulator.kemu(p, **emu)
     lnprob_prepped = lambda params: lnprob(params, model, datapoints, err, truths, priors,
             which_params=which_params,
             priors2d=priors2d, add2d=config['add2d'],
-            Planck=Planck, addPlanck=config['addPlanck'])
+            Planck=Planck, addPlanck=config['addPlanck'], vectorize=config['vectorize'])
     
     chains_fn = f"{mcmc_dir}/saved_chains.h5"
     save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
@@ -107,32 +117,40 @@ def main():
     # p0[6] = pass_prior[52]
     #p0 = pass_prior[100:112]
     p0 = p0[:,np.where(np.isin(labels, which_params))[0]]
-
-    print(p0)
             
-    print('Okay, here we go!')
-    print(f"Running the mcmc for {config['title']} on the params:")
-    print(f"\t{config['which_params_to_fit']}...")
     print(f"fitting tau prior is {config['addPlanck']}...")
-    print(f"using emulator version {config['emu']}")
+    print(f"evaluating likelihood function in vector mode is {config['vectorize']}...")
+
+    print('========================================================')
+
+    print('Okay, here we go!')
 
     start_time = time.time()
 
-    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob_prepped)
+    sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob_prepped, vectorize=config['vectorize'])
 
     sampler.run_mcmc(p0, burnin)
     burnin_samples = sampler.get_chain()
     start = burnin_samples[-1] # Get the burnin samples
 
+    end_time = time.time()
+
+    print('--------------------------------------------------------')
+    print(f'Burn in phase took {(end_time - start_time) / 60:.3f} minutes...')
+    print(f'Starting proper run...')
+    print('--------------------------------------------------------')
+
+    start_time = time.time()
+
     sampler = zeus.EnsembleSampler(nwalkers, ndim, lnprob_prepped,
               #      args=[datapoints, err, theta_true, lmask, which_params],
-                    moves=zeus.moves.GlobalMove(config['rescale_cov']))
+                    moves=zeus.moves.GlobalMove(config['rescale_cov']), vectorize=config['vectorize'])
     
     sampler.run_mcmc(start, nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
 
     end_time = time.time()
 
-    print(f'finished MCMC in {(end_time - start_time) / (60 * 60)} hours, saving files in {mcmc_dir}...')
+    print(f'finished MCMC in {(end_time - start_time) / (60 * 60):.2} hours, saving files in {mcmc_dir}...')
 
     np.save(f'{mcmc_dir}/burnin', burnin_samples)
     np.save(f'{mcmc_dir}/tau', autocorr_check.estimates)

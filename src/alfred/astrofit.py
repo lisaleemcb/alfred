@@ -165,3 +165,32 @@ def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
     guess_model = emulator.kemu(theta, **emu)
 
     return -0.5 * (data[lmask] - guess_model[lmask]) ** 2.0 / err[lmask]**2.0
+
+class MCMC:
+    def __init__(self, config, base_dir=base_dir):
+
+        self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{config['title']}"
+
+    def init_run(self):
+        if self.verbose:
+            print(f"Now running initialisation of MCMC run")
+            print(f'-----------------------------------------')
+            print(f"putting mcmc chains in {self.mcmc_dir}...")
+
+        os.makedirs(self.mcmc_dir)
+
+
+        lmask = np.where((config['lmin'] < ells) & (ells < config['lmax']))
+    which_params = config['which_params_to_fit']
+
+    if which_params == 'all':
+        which_params = df.columns
+
+    theta_dict = {}
+    for pname in df.columns:
+        theta_dict[pname] = config[pname]
+
+    print(f"simulating data with the parameter values:")
+    print(theta_dict)
+    # theta_true =  df[df.columns].mean().to_numpy()
+    theta_true = np.asarray(list(theta_dict.values()))
