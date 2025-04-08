@@ -1,0 +1,46 @@
+title = 'fixXrays_v4'
+
+# # files paths
+# #home_dir = '/home/emc-brid'  # glx
+# home_dir = '/Users/emcbride' # personal ordi
+# # home_dir = '/jet/home' # bridges2
+# #
+# data_dir = '/Users/emcbride/Datasets/LoReLi'
+# # data_dir = '/data/cluster/emc-brid/Datasets/LoReLi'
+
+sim_dir = 'ps_ee'
+Pee_dir = 'spectra/Pee'
+kSZ_dir = 'spectra/kSZ'
+fits_dir = 'lklhd_files'
+params_dir = 'param_files'
+
+ion_fn = 'metadata/ion_histories_full.npz'
+redshift_fn = 'metadata/redshift_list.dat'
+
+
+# data config
+survey = 'CMB-HD'
+lmin = 1000
+lmax = 15000
+addnoise = false
+
+# emulator
+emu = 'v4'
+
+# mcmc
+nwalkers = 12
+burnin = 500
+nsteps = 100000
+rescale_cov = 0.1
+add2d = true
+addPlanck = false
+vectorize = true
+
+# parameters
+which_params_to_fit = ['tau', 'Mmin', 'fesc']
+fX = -2.72
+rHS =  0.50
+tau = 3.44
+Mmin = 8.80
+fesc = 0.27
+
