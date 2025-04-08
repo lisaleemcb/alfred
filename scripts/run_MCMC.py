@@ -77,6 +77,8 @@ def main():
         emu = emu_v3
     elif config['emu'] == 'v3.1':
         emu = emu_v3p1
+    elif config['emu'] == 'v4':
+        emu = emu_v4
 
     print(f"using emulator version {config['emu']}...")
     datapoints = emulator.kemu(theta_true, **emu, log_data=True)
@@ -88,8 +90,6 @@ def main():
     if config['addnoise'] == True:
         print(f"adding noise to simulated data...")
         datapoints = datapoints + np.random.normal(scale=err)
-
-    np.savez(f"{mcmc_dir}/data", truths=truths, datapoints=datapoints, err=err)
 
     print()
     print(f"Running the mcmc for {config['title']} on the params:")
@@ -112,11 +112,20 @@ def main():
     nsteps = config['nsteps']
     ndim = len(which_params)
 
-    p0 = pass_Planck[:12]
-    # p0 = pass_prior[50:62]
-    # p0[6] = pass_prior[52]
-    #p0 = pass_prior[100:112]
+    random_samples = []
+    for i, p in enumerate(priors):
+        low, high = p
+        s = np.random.uniform(low, high, 1000) # not robust!
+        random_samples.append(s)
+
+    random_samples = np.column_stack(random_samples)
+
+    p0 = random_samples[lnprior(random_samples, truths, priors,
+                        add2d=True, addPlanck=True, verbose=True) == 0][:12]
+    
     p0 = p0[:,np.where(np.isin(labels, which_params))[0]]
+    
+    np.savez(f"{mcmc_dir}/data", truths=truths, datapoints=datapoints, err=err, p0=p0)
             
     print(f"fitting tau prior is {config['addPlanck']}...")
     print(f"evaluating likelihood function in vector mode is {config['vectorize']}...")
@@ -150,7 +159,7 @@ def main():
 
     end_time = time.time()
 
-    print(f'finished MCMC in {(end_time - start_time) / (60 * 60):.2} hours, saving files in {mcmc_dir}...')
+    print(f'finished MCMC in {(end_time - start_time) / (60 * 60):.3} hours, saving files in {mcmc_dir}...')
 
     np.save(f'{mcmc_dir}/burnin', burnin_samples)
     np.save(f'{mcmc_dir}/tau', autocorr_check.estimates)

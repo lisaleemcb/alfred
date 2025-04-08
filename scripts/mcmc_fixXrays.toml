@@ -1,4 +1,4 @@
-title = 'fixXrays'
+title = 'fixXrays_v2'
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -34,6 +34,7 @@ nsteps = 10000
 rescale_cov = 0.1
 add2d = true
 addPlanck = false
+vectorize = true
 
 # parameters
 which_params_to_fit = ['tau', 'Mmin', 'fesc']

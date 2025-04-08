@@ -137,11 +137,11 @@ def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir='/Users/emcbride/Datase
 
     return sims
 
-def spectra(sn, dir='nells30_v3.1', basedir=base_dir, prefix='kSZ_LoReLi'):
+def spectra(sn, dir='nells30_v3.1', key='Dell', basedir=base_dir, prefix='kSZ_LoReLi'):
     fn = f"{base_dir}/spectra/kSZ/LoReLi/{dir}/{prefix}_simu{sn}.npz"
     f = np.load(fn, allow_pickle=True)
 
-    return f['Dell']
+    return f[key]
     
 def smooth_Pee(sim):
     k = []

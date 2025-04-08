@@ -95,6 +95,7 @@ def main():
 
     print(f"Running through sims in {args.n}th file")
 
+    sims_empty = []
     sims_nan = []
     sims_failedreion = []
     print(f'Now simulating {len(sims)} kSZ spectra!')
@@ -147,8 +148,8 @@ def main():
 
         if np.isnan(utils.find_index(sim.xe)):
             print(f'Sim {sn} is missing redshifts! Skipping...')
+            sims_empty.append(sn)
             continue
-
 
         print('Check cleared...loading data...')
 
@@ -207,7 +208,7 @@ def main():
         print(f'saving spectra for simulation {sn} at {LoReLi_fn}...')
         end_time = time.time()
         print(f"One kSZ run took {(end_time - start_time) / 60.0 :.3f} minutes")
-        print(f'{j+1} sims completed, {len(sims)-(j - 1)} to go!')
+        print(f'{j+1} sims completed, {len(sims)-(j + 1)} to go!')
 
     np.save(f'sims_nan_{args.n}', sims_nan)
     np.save(f'sims_failedreion_{args.n}', sims_failedreion)

@@ -47,7 +47,6 @@ class Emulator:
                  y_train=None,
                  y_test=None,
                  model=None,
-                 uncertainties=None,
                  log_data=True,
                  method='Emulator_Base_Class',
                  verbose=True):
@@ -61,10 +60,6 @@ class Emulator:
         self.y_train = y_train
         self.y_test= y_test
         self.model = model
-        if uncertainties is None:
-            self.uncertainties = np.ones_like(self.dataset[0])
-        elif uncertainties is not None:
-            self.uncertainties = uncertainties
         self.scale_data = scale_data
         self.log_data = log_data
         self.method = method
@@ -227,21 +222,26 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, dataset, features, hyperparameters, uncertainties=None,
+    def __init__(self, dataset, features, hyperparameters,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
         super().__init__(features=features, dataset=dataset, hyperparameters=hyperparameters,
-                            uncertainties=uncertainties, scale_data=scale_data, log_data=log_data,
+                            scale_data=scale_data, log_data=log_data,
                             method=method, verbose=verbose)
 
-        self.neurons = hyperparameters['neurons']
-        self.epochs = hyperparameters['epochs']
+        self.hyperparameters = hyperparameters
+        self.neurons = self.hyperparameters['neurons']
+        self.epochs = self.hyperparameters['epochs']
+        self.uncertainties = self.hyperparameters['uncertainities']
+
+        if self.uncertainties is None:
+            self.uncertainties = np.ones_like(self.dataset[0])
+ 
 
     def regress(self, kSZ=True, xe=False):
         if self.verbose:
             print(f"Now running regression with {self.neurons} neurons in the middle layer and {self.epochs} epochs...")
-
         
         if xe:
             def custom_loss(y_true, y_pred):
@@ -334,7 +334,9 @@ class NeuralNetwork(Emulator):
         joblib.dump(self.scalerX, f"{path}/{dir}/scalerX.pkl")
         joblib.dump(self.scalerY, f"{path}/{dir}/scalerY.pkl")
 
-        np.savez(f"{path}/{dir}/training_files", X_train=self.X_train, X_test=self.X_test, y_train=self.y_train, y_test=self.y_test)
+        np.savez(f"{path}/{dir}/training_files", X_train=self.X_train, X_test=self.X_test,
+                                                y_train=self.y_train, y_test=self.y_test,
+                                                hyperparameters=self.hyperparameters, uncertainties=self.uncertainties)
 
         if self.verbose:
             print(f"Emulator files saved in {dir}")
