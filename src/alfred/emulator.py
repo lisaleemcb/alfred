@@ -40,6 +40,7 @@ def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
 class Emulator:
     """A base class with for kSZ emulator."""
     def __init__(self, features=None, dataset=None, hyperparameters=None,
+                 splits=None,
                  data_dir=f'/{home_dir}',
                  scale_data=True,
                  X_train=None,
@@ -54,6 +55,7 @@ class Emulator:
         self.dataset = dataset
         self.features = features
         self.hyperparameters = hyperparameters
+        self.splits = splits
         self.data_dir = data_dir
         self.X_train = X_train
         self.X_test = X_test
@@ -147,12 +149,7 @@ class Emulator:
     def fancy_plot(self, xvariable):
         # plot Cls true and Cls predicted with errors
 
-        if self.scale_data:
-           y_test = self.scalerY.inverse_transform(self.y_test)
-
-        if self.log_data:
-            y_test = 10.0**y_test
-
+        y_test = self.descale(self.y_test)
         y_pred = self.prediction(self.X_test)
 
         new_length = 9991
@@ -222,18 +219,19 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, dataset, features, hyperparameters,
+    def __init__(self, dataset, features, hyperparameters, splits=None,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
-        super().__init__(features=features, dataset=dataset, hyperparameters=hyperparameters,
-                            scale_data=scale_data, log_data=log_data,
-                            method=method, verbose=verbose)
+        super().__init__(features=features, dataset=dataset, splits=splits, 
+                        hyperparameters=hyperparameters,
+                        scale_data=scale_data, log_data=log_data,
+                        method=method, verbose=verbose)
 
         self.hyperparameters = hyperparameters
         self.neurons = self.hyperparameters['neurons']
         self.epochs = self.hyperparameters['epochs']
-        self.uncertainties = self.hyperparameters['uncertainities']
+        self.uncertainties = self.hyperparameters['uncertainties']
 
         if self.uncertainties is None:
             self.uncertainties = np.ones_like(self.dataset[0])
@@ -334,9 +332,12 @@ class NeuralNetwork(Emulator):
         joblib.dump(self.scalerX, f"{path}/{dir}/scalerX.pkl")
         joblib.dump(self.scalerY, f"{path}/{dir}/scalerY.pkl")
 
-        np.savez(f"{path}/{dir}/training_files", X_train=self.X_train, X_test=self.X_test,
-                                                y_train=self.y_train, y_test=self.y_test,
-                                                hyperparameters=self.hyperparameters, uncertainties=self.uncertainties)
+        np.savez(f"{path}/{dir}/training_files", X_train=self.descale(self.X_train, X_or_y='X'),
+                                                X_test=self.descale(self.X_test, X_or_y='X'),
+                                                y_train=self.descale(self.y_train), 
+                                                y_test=self.descale(self.y_test),
+                                                hyperparameters=self.hyperparameters,
+                                                uncertainties=self.uncertainties)
 
         if self.verbose:
             print(f"Emulator files saved in {dir}")
