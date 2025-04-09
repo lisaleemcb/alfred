@@ -58,11 +58,13 @@ def main():
     failedreion = np.load(f'{base_dir}/metadata/sims_failed.npy')
     sims = utils.get_sims('nells30_v3.1', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
 
+    print('reading in database...')
     df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
     df = df.loc[df.index.intersection(sims)]
     #df = df.drop(sims_nan, errors='ignore')
     df = df.drop(failedreion, errors='ignore')
 
+    print('forming datasets...')
     indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
     test_indices = np.random.randint(0, len(df)-1, int(.2 * len(df)))
     mask = np.zeros(len(df), dtype=bool)
@@ -87,6 +89,7 @@ def main():
     fig, ax = plt.subplots(1,3, sharey=True, figsize=(12,5))
     fig.subplots_adjust(wspace=0.0)
 
+    print('calculating uncertainities...')
     splits = []
     CVs = []
     noise = []
@@ -106,6 +109,8 @@ def main():
     fig.savefig(f"{dir}/datasets.png")
 
     CV_n_noise = [CVs[i] + noise[i] for i in range(len(CVs))]
+
+    print('initialising inputs...')
 
     uncertainties = [[None, None, None], [None, None, None], CVs, CV_n_noise]
 
