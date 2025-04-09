@@ -67,7 +67,7 @@ def main():
     print('loading datasets...')
     features = df.to_numpy()
     dataset_v0 = np.load(f"{base_dir}/metadata/dataset_v0.npy")
-    dataset_v1 = np.load(f"{base_dir}/metadata/dataset_v.npy")
+    dataset_v1 = np.load(f"{base_dir}/metadata/dataset_v1.npy")
 
     print('datasets loaded!')
 
