@@ -74,7 +74,7 @@ class Emulator:
         self.history = None
         self.scaler = None
 
-    def prep_data(self, splits=None, nells=30):
+    def prep_data(self, nells=30):
         """Describes the class."""
         
         if self.verbose:
@@ -89,28 +89,27 @@ class Emulator:
 
         #     samples[i] = spectra['kSZ']
 
-        if self.log_data:
-            if self.verbose:
-                print('logging input data...')
-            self.dataset = np.log10(self.dataset)
-                
-        # self.ells = spectra['ells'] 
-        # self.samples = samples
-        # self.pn = np.where(np.isin(self.dataset.columns, self.features))[0]
 
-        # if self.verbose:
-        #     print(f'Prepped data')
-        #     print(f'{samples.shape} samples')
-        #     print(f'{self.params[:,self.pn].shape} features')
+        if self.splits is None:
+            if self.log_data:
+                if self.verbose:
+                    print('logging input data...')
+                self.dataset = np.log10(self.dataset)
 
-        if splits is None:
             X_train, X_test, y_train, y_test = train_test_split(self.features,
                                                                 self.dataset,
                                                                 test_size=0.2,
-                                                                random_state=42)
-        elif splits is not None:
-            X_train, X_test, y_train, y_test = splits
+                                                              random_state=42)
+        elif self.splits is not None:
+            X_train, X_test, y_train, y_test = self.splits
 
+            if self.log_data:
+                if self.verbose:
+                    print('logging input data...')
+
+                y_train = np.log10(y_train)
+                y_test = np.log10(y_test)
+            
         if self.scale_data:
             if self.verbose:
                 print('scaling features and data...')
@@ -133,8 +132,6 @@ class Emulator:
         if X_or_y == 'X':
             if self.scale_data:
                 arr = self.scalerX.inverse_transform(arr)
-            if self.log_data:
-                arr = 10.0**arr
             return arr
         
         if X_or_y == 'y':
@@ -219,7 +216,7 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, dataset, features, hyperparameters, splits=None,
+    def __init__(self, hyperparameters, dataset=None, features=None, splits=None,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
@@ -227,19 +224,26 @@ class NeuralNetwork(Emulator):
                         hyperparameters=hyperparameters,
                         scale_data=scale_data, log_data=log_data,
                         method=method, verbose=verbose)
+        
+        if (dataset is None) == (splits is None):
+            raise ValueError("You must provide either a full dataset, or the splits of a dataset (in form [X_train, X_test, y_train, y_test])")
 
         self.hyperparameters = hyperparameters
+        self.features = features
+        self.splits = splits
         self.neurons = self.hyperparameters['neurons']
         self.epochs = self.hyperparameters['epochs']
         self.uncertainties = self.hyperparameters['uncertainties']
 
         if self.uncertainties is None:
-            self.uncertainties = np.ones_like(self.dataset[0])
- 
-
+            if self.dataset is not None:
+                self.uncertainties = np.ones_like(self.dataset[0])
+            elif self.splits is not None:
+                self.uncertainties = np.ones_like(splits[2][0])
     def regress(self, kSZ=True, xe=False):
         if self.verbose:
-            print(f"Now running regression with {self.neurons} neurons in the middle layer and {self.epochs} epochs...")
+            print(f"Now running regression with hyperparameters:")
+            print(f"\t {self.hyperparameters}")
         
         if xe:
             def custom_loss(y_true, y_pred):
@@ -250,7 +254,7 @@ class NeuralNetwork(Emulator):
             layer_norm = tf.keras.layers.Normalization()
             layer_norm.adapt(self.X_train)
 
-            nx = self.dataset.shape[1]
+            nx = self.y_train.shape[1]
             # Define the model
             self.model = Sequential([
                 layer_norm,
@@ -289,7 +293,7 @@ class NeuralNetwork(Emulator):
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-            self.model.add(Dense(units=self.dataset.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
+            self.model.add(Dense(units=self.y_train.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
             
         #     # Compile the model
             self.model.compile(optimizer='adam', loss=lambda y_true, y_pred: weighted_mse_loss(y_true, y_pred, uncertainty_tensor))

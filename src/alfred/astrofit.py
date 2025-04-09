@@ -48,19 +48,19 @@ features = cp.deepcopy(df.to_numpy())
 pass_prior = np.load(f'{base_dir}/inference/priors/pass_prior.npy')
 pass_Planck = np.load(f'{base_dir}/inference/priors/pass_Planckprior.npy')
 
-# scalerX_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerX_LoReLi_style.pkl")
-# scalerY_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerY_LoReLi_style.pkl")
-# model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/LoReLi_settings/NN_LoReLi_style_model.keras")
-# emu_v2 = {'scalerX': scalerX_v2,
-#     'scalerY': scalerY_v2,
-#     'model': model_v2}
-
-scalerX_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerX_v2.pkl")
-scalerY_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerY_v2.pkl")
-model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/v2/NNv2_model.keras")
+scalerX_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerX_LoReLi_style.pkl")
+scalerY_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerY_LoReLi_style.pkl")
+model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/LoReLi_settings/NN_LoReLi_style_model.keras")
 emu_v2 = {'scalerX': scalerX_v2,
     'scalerY': scalerY_v2,
     'model': model_v2}
+
+# scalerX_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerX_v2.pkl")
+# scalerY_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerY_v2.pkl")
+# model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/v2/NNv2_model.keras")
+# emu_v2 = {'scalerX': scalerX_v2,
+#     'scalerY': scalerY_v2,
+#     'model': model_v2}
 
 scalerX_v3 = joblib.load(f"{base_dir}/emulators/nn_v3/scalerX.pkl")
 scalerY_v3 = joblib.load(f"{base_dir}/emulators/nn_v3/scalerY.pkl")
@@ -193,17 +193,24 @@ def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
 class MCMC:
     def __init__(self,
                     config,
+                    emu=None,
                     priors=priors,
                     priors2d=priors2d,
                     Planck=Planck,
                     Planck_err=Planck_err,
                     base_dir=base_dir,
+                    dir=None,
+                    save=True,
                     verbose=False):
         
         self.config = config
         self.verbose = verbose
+        self.save = save
         self.title = self.config['title']
-        self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{self.title}"
+        if dir is None:
+            self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{self.title}"
+        elif dir is not None:
+            self.mcmc_dir = f"{dir}/{self.title}"
 
         self.telescope = self.config['survey']
         self.lmin = self.config['lmin']
@@ -214,6 +221,8 @@ class MCMC:
             self.emu = emu_v3
         elif self.config['emu'] == 'v3.1':
             self.emu = emu_v3p1
+        elif self.config['emu'] == 'emu':
+            self.emu = emu
         self.addnoise = self.config['addnoise']
 
         self.which_params = self.config['which_params_to_fit']
@@ -353,13 +362,17 @@ class MCMC:
         end_time = time.time()
 
         if self.verbose:
-            print(f'finished MCMC in {(end_time - start_time) / (60 * 60):.2} hours, saving files in {self.mcmc_dir}...')
+            print(f'finished MCMC in {(end_time - start_time) / (60 * 60):.2} hours')
+            if self.save:
+                print(f'saving files in {self.mcmc_dir}...')
 
-        np.save(f'{self.mcmc_dir}/burnin', burnin_samples)
-        np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
-        np.save(f'{self.mcmc_dir}/R', R_check.estimates)
+        if self.save:
+            np.save(f'{self.mcmc_dir}/burnin', burnin_samples)
+            np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
+            np.save(f'{self.mcmc_dir}/R', R_check.estimates)
 
-        print('Done, YAY!')
+        if self.verbose:
+            print('Done, YAY!')
 
         return sampler
 
