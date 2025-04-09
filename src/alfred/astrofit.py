@@ -200,12 +200,10 @@ class MCMC:
                     Planck_err=Planck_err,
                     base_dir=base_dir,
                     dir=None,
-                    save=True,
                     verbose=False):
         
         self.config = config
         self.verbose = verbose
-        self.save = save
         self.title = self.config['title']
         if dir is None:
             self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{self.title}"
@@ -302,7 +300,7 @@ class MCMC:
                                             Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
                                             vectorize=self.vectorize)
 
-    def start_run(self):
+    def start_run(self, save=True):
         if self.verbose:
             print(f"Now starting MCMC run")
             print(f'-----------------------------------------')
@@ -363,10 +361,10 @@ class MCMC:
 
         if self.verbose:
             print(f'finished MCMC in {(end_time - start_time) / (60 * 60):.2} hours')
-            if self.save:
+            if save:
                 print(f'saving files in {self.mcmc_dir}...')
 
-        if self.save:
+        if save:
             np.save(f'{self.mcmc_dir}/burnin', burnin_samples)
             np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
             np.save(f'{self.mcmc_dir}/R', R_check.estimates)
