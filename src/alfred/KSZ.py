@@ -21,9 +21,11 @@ from scipy.interpolate import CubicSpline, BSpline, splrep, RegularGridInterpola
 from alfred.parameters import *
 
 
-def get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=False,
-            Pee_data=None, xe_data=None, z_data=None, k_data=None, alpha0=alpha0, kappa=kappa,
-            kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, dz=dz, verbose=True, helium=True, helium2=True):
+def get_KSZ(ells, interpolate_xe=True,interpolate_Pee=True,
+            Pee_data=None, xe_data=None, z_data=None, k_data=None,
+            alpha0=alpha0, kappa=kappa, helium=True, helium2=True,
+            kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16,
+            dz=dz, verbose=True,  debug=False):
         #     kmin=kmin, kmax=kmax, xemin=xemin, xemax=xemax):
     
     KSZ = KSZ_power(verbose=verbose, interpolate_xe=interpolate_xe, interpolate_Pee=interpolate_Pee,

@@ -64,7 +64,13 @@ def main():
     #df = df.drop(sims_nan, errors='ignore')
     df = df.drop(failedreion, errors='ignore')
 
-    print('forming datasets...')
+    print('loading datasets...')
+    features = df.to_numpy()
+    dataset_v0 = np.load(f"{base_dir}/metadata/dataset_v0.npy")
+    dataset_v1 = np.load(f"{base_dir}/metadata/dataset_v.npy")
+
+    print('datasets loaded!')
+
     indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
     test_indices = np.random.randint(0, len(df)-1, int(.2 * len(df)))
     mask = np.zeros(len(df), dtype=bool)
@@ -75,13 +81,15 @@ def main():
     np.save(f'{dir}/test_sims', test_sims)
     np.save(f'{dir}/train_sims', train_sims)
 
-    features = df.to_numpy()
-    dataset_v0 = np.zeros((len(features), ells.size))
-    dataset_v1 = np.zeros((len(features), ells.size))
+    # print('forming datasets...')
+    
+    # features = df.to_numpy()
+    # dataset_v0 = np.zeros((len(features), ells.size))
+    # dataset_v1 = np.zeros((len(features), ells.size))
 
-    for i, sn in enumerate(df.index):
-        dataset_v0[i] = utils.spectra(sn, dir='nells30_v2', key='kSZ')
-        dataset_v1[i] = utils.spectra(sn, dir='nells30_v3.1', key='Dell')
+    # for i, sn in enumerate(df.index):
+    #     dataset_v0[i] = utils.spectra(sn, dir='nells30_v2', key='kSZ')
+    #     dataset_v1[i] = utils.spectra(sn, dir='nells30_v3.1', key='Dell')
 
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
