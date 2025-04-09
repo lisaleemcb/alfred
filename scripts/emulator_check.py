@@ -163,7 +163,7 @@ def main():
             ax.set_xlabel('Epoch')
 
             ax.set_title(f'Model Loss')
-            ax[0].set_ylabel('Loss')
+            ax.set_ylabel('Loss')
 
             fig.suptitle('Model Loss')
             fig.savefig(f"{dir}/modelloss_{label_emu}_{label_data}")
