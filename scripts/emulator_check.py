@@ -147,6 +147,9 @@ def main():
             print(f"Running analysis with {label_emu} and {label_data}")
             print('====================================================================')
 
+            run_dir = f"{dir}/{label_emu}_{label_data}"
+            os.mkdir(run_dir)
+
             print(hp)
             hp['uncertainties'] = uncertainties[i][j]
 
@@ -166,9 +169,9 @@ def main():
             ax.set_ylabel('Loss')
 
             fig.suptitle('Model Loss')
-            fig.savefig(f"{dir}/modelloss_{label_emu}_{label_data}")
+            fig.savefig(f"{run_dir}/modelloss_{label_emu}_{label_data}")
 
-            nn.save(f"{label_emu}_{label_data}", path=dir)
+            nn.save(f"nn_{label_emu}_{label_data}", path=run_dir)
 
             emu = {'scalerX': nn.scalerX,
                    'scalerY': nn.scalerY,
@@ -176,11 +179,11 @@ def main():
 
             print(f"Finished constructing emulator for {label_emu} and {label_data}, now running MCMC")
 
-            config['title'] = f"{config['title']}_{label_emu}_{label_data}"
+            config['title'] = f"mcmc_{label_emu}_{label_data}"
             config['emulator'] = emu
 
-            mcmc_run = MCMC(config, dir=dir, verbose=True)
-            mcmc_run.init_data()
+            mcmc_run = MCMC(config, dir=run_dir, verbose=True)
+            mcmc_run.init_data(savefig=True)
             mcmc_run.init_run()
 
             mcmc_run.start_run(save=True)

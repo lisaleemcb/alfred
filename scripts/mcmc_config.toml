@@ -1,4 +1,4 @@
-title = 'test_mcmc'
+title = 'mcmc_config'
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -7,6 +7,8 @@ title = 'test_mcmc'
 # #
 # data_dir = '/Users/emcbride/Datasets/LoReLi'
 # # data_dir = '/data/cluster/emc-brid/Datasets/LoReLi'
+
+overwrite = false
 
 sim_dir = 'ps_ee'
 Pee_dir = 'spectra/Pee'

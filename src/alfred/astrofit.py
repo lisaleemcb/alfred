@@ -83,6 +83,9 @@ emu_v4 = {'scalerX': scalerX_v4,
     'scalerY': scalerY_v4,
     'model': model_v4}
 
+p_from_dict = lambda pdict: np.asarray(list(pdict.values()))
+p_from_npz = lambda file: np.asarray(list(file['truths'].item().values()))
+
 ztau = np.linspace(0,20,1000)
 
 def xe2tau(z, xe):
@@ -193,6 +196,7 @@ def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
 class MCMC:
     def __init__(self,
                     config,
+                    p0=None,
                     emu=None,
                     priors=priors,
                     priors2d=priors2d,
@@ -210,15 +214,20 @@ class MCMC:
         elif dir is not None:
             self.mcmc_dir = f"{dir}/{self.title}"
 
+        os.makedirs(self.mcmc_dir)
+
         self.telescope = self.config['survey']
         self.lmin = self.config['lmin']
         self.lmax = self.config['lmax']
+        self.p0 = p0
         if self.config['emu'] == 'v2':
             self.emu = emu_v2
         elif self.config['emu'] == 'v3':
             self.emu = emu_v3
         elif self.config['emu'] == 'v3.1':
             self.emu = emu_v3p1
+        elif self.config['emu'] == 'v4':
+            self.emu = emu_v4
         elif self.config['emu'] == 'emu':
             self.emu = emu
         self.addnoise = self.config['addnoise']
@@ -243,11 +252,14 @@ class MCMC:
         self.ndim = len(self.which_params)
         self.rescale_cov = self.config['rescale_cov']
 
-    def init_data(self):
+    def init_data(self, savefig=True):
         if self.verbose:
             print(f'-----------------------------------------')
             print(f"Now initialising data for mcmc run")
             print(f'-----------------------------------------')
+
+        if savefig:
+            fig, ax = plt.subplots()
 
         self.truths = {}
         for pname in df.columns:
@@ -259,6 +271,8 @@ class MCMC:
         self.err_cov = surveys.error_cov(ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
 
+        if savefig:
+            ax.plot(ells, self.datapoints, color='green', alpha=.3)
 
         if self.addnoise:
             if self.verbose:
@@ -269,10 +283,17 @@ class MCMC:
         self.datapoints = self.datapoints[self.lmask]
         self.err = self.err[self.lmask]
 
+        if savefig:
+            ax.errorbar(ells[self.lmask], self.datapoints, color='deeppink', marker='.', ls='', yerr=self.err)
+            ax.set_xlabel('ell')
+            ax.set_ylabel('Dell')
+
+            fig.savefig(f"{self.mcmc_dir}/{self.title}_data")
+
         if self.verbose:
             print(f"simulating data with the parameter values:")
             print(self.truths)
-            print(f"using emulator version {self.emu}...")
+            print(f"using emulator version {self.config['emu']}...")
 
 
     def init_run(self):
@@ -283,8 +304,6 @@ class MCMC:
             print()
             print(f"Running the mcmc for {self.title} on the params:")
             print(f"\t{self.which_params}...")
-
-        os.makedirs(self.mcmc_dir)
 
         def model(p, lmask=self.lmask, emu=self.emu):
             if p.ndim == 1:
@@ -318,12 +337,16 @@ class MCMC:
         R_check = zeus.callbacks.SplitRCallback(ncheck=100, epsilon=0.01, nsplits=2, discard=0.5)
         miniter_check = zeus.callbacks.MinIterCallback(nmin=500)
 
-        p0 = pass_Planck[:12]
-        # p0 = pass_prior[50:62]
-        # p0[6] = pass_prior[52]
-        #p0 = pass_prior[100:112]
-        p0 = p0[:,np.where(np.isin(labels, self.which_params))[0]]
+        if self.p0 is None:
+            _p0 = pass_Planck[:12]
+            # p0 = pass_prior[50:62]
+            # p0[6] = pass_prior[52]
+            #p0 = pass_prior[100:112]
+            _p0 = _p0[:,np.where(np.isin(labels, self.which_params))[0]]
                 
+        elif self.p0 is not None:
+            _p0 = self.p0
+
         if self.verbose:
             print(f"fitting tau prior is {self.addPlanck}...")
             print(f"evaluating likelihood function in vector mode is {self.vectorize}...")
@@ -337,7 +360,7 @@ class MCMC:
         sampler = zeus.EnsembleSampler(self.nwalkers, self.ndim, self.lnprob_prepped,
                                         vectorize=self.vectorize)
 
-        sampler.run_mcmc(p0, self.burnin)
+        sampler.run_mcmc(_p0, self.burnin)
         burnin_samples = sampler.get_chain()
         start = burnin_samples[-1] # Get the burnin samples
 

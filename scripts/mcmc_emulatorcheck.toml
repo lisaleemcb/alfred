@@ -29,8 +29,8 @@ emu = 'v2'
 
 # mcmc
 nwalkers = 12
-burnin = 5000
-nsteps = 10000
+burnin = 50
+nsteps = 100
 rescale_cov = 0.1
 add2d = true
 addPlanck = false
