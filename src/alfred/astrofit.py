@@ -52,8 +52,15 @@ scalerX_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerX_LoReLi_s
 scalerY_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerY_LoReLi_style.pkl")
 model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/LoReLi_settings/NN_LoReLi_style_model.keras")
 emu_v2 = {'scalerX': scalerX_v2,
-    'scalerY': scalerY_v2,
-    'model': model_v2}
+     'scalerY': scalerY_v2,
+     'model': model_v2}
+
+# scalerX_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerX_v2.pkl")
+# scalerY_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerY_v2.pkl")
+# model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/v2/NNv2_model.keras")
+# emu_v2 = {'scalerX': scalerX_v2,
+#    'scalerY': scalerY_v2,
+#    'model': model_v2}
 
 # scalerX_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerX_v2.pkl")
 # scalerY_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerY_v2.pkl")
