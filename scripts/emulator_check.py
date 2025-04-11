@@ -184,7 +184,7 @@ def main():
 
             print(f"Finished constructing emulator for {label_emu} and {label_data}, now running MCMC")
 
-            config['title'] = f"mcmc_run""
+            config['title'] = f"mcmc_run"
             config['emulator'] = emu
 
             mcmc_run = MCMC(config, dir=run_dir, verbose=True)
