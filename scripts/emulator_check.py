@@ -169,13 +169,14 @@ def main():
 
             ax.set_xlabel('Epoch')
 
-            ax.set_title(f'Model Loss')
+            ax.set_title(f'emulator v{i}, dataset v{j}')
             ax.set_ylabel('Loss')
 
             fig.suptitle('Model Loss')
+            fig.legend()
             fig.savefig(f"{run_dir}/modelloss_{label_emu}_{label_data}")
 
-            nn.save(f"nn_{label_emu}_{label_data}", path=run_dir)
+            nn.save(f"nn_emulator", path=run_dir)
 
             emu = {'scalerX': nn.scalerX,
                    'scalerY': nn.scalerY,
@@ -183,7 +184,7 @@ def main():
 
             print(f"Finished constructing emulator for {label_emu} and {label_data}, now running MCMC")
 
-            config['title'] = f"mcmc_{label_emu}_{label_data}"
+            config['title'] = f"mcmc_run""
             config['emulator'] = emu
 
             mcmc_run = MCMC(config, dir=run_dir, verbose=True)
