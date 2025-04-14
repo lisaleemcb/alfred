@@ -91,9 +91,9 @@ def main():
         dataset_v0[i] = utils.spectra(sn, dir='nells30_v2', key='kSZ')
         dataset_v1[i] = utils.spectra(sn, dir='nells30_v3.1', key='Dell')
 
-    np.save('{dir}/dataset_v0', dataset_v0)
-    np.save('{dir}/dataset_v1', dataset_v1)
-    np.save('{dir}/dataset_v2', dataset_v1[:,indices])
+    np.save(f'{dir}/dataset_v0', dataset_v0)
+    np.save(f'{dir}/dataset_v1', dataset_v1)
+    np.save(f'{dir}/dataset_v2', dataset_v1[:,indices])
 
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
