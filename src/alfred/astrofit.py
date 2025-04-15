@@ -392,7 +392,6 @@ class MCMC:
                         moves=zeus.moves.GlobalMove(self.rescale_cov), vectorize=self.vectorize)
         
         sampler.run_mcmc(start, self.nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
-
         end_time = time.time()
 
         if self.verbose:
@@ -404,6 +403,9 @@ class MCMC:
             np.save(f'{self.mcmc_dir}/burnin', burnin_samples)
             np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
             np.save(f'{self.mcmc_dir}/R', R_check.estimates)
+            
+            fig = corner.corner(sampler.get_chain(flat=True))
+            fig.savefig('corner.png')
 
         if self.verbose:
             print('Done, YAY!')
