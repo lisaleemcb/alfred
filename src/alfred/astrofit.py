@@ -32,6 +32,7 @@ telescopes ={
 
 
 delta_ell = np.mean(np.diff(ells))
+indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
 Planck = 0.054
 Planck_err = 0.007
 priors2d = np.load(f'{base_dir}/inference/priors/2dpriors.npz')
@@ -228,14 +229,19 @@ class MCMC:
         self.lmax = self.config['lmax']
         self.p0 = p0
         if self.config['emu'] == 'v2':
+            print(f"using emu: {self.config['emu']}")
             self.emu = emu_v2
         elif self.config['emu'] == 'v3':
+            print(f"using emu: {self.config['emu']}")
             self.emu = emu_v3
         elif self.config['emu'] == 'v3.1':
+            print(f"using emu: {self.config['emu']}")
             self.emu = emu_v3p1
         elif self.config['emu'] == 'v4':
+            print(f"using emu: {self.config['emu']}")
             self.emu = emu_v4
-        elif self.config['emu'] == 'emu':
+        elif self.config['emu'] == 'input_emu':
+            print(f"using emu: {self.config['emu']}")
             self.emu = emu
         self.addnoise = self.config['addnoise']
 
@@ -274,7 +280,7 @@ class MCMC:
 
         self.theta_true = np.asarray(list(self.truths.values()))
         self.lmask = np.where((self.lmin < ells) & (ells < self.lmax))[0]
-        self.datapoints = emulator.kemu(self.theta_true, **self.emu, log_data=True)
+        self.datapoints = emulator.kemu(self.theta_true, **self.emu)
         self.err_cov = surveys.error_cov(ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
 
