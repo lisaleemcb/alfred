@@ -64,36 +64,41 @@ def main():
     #df = df.drop(sims_nan, errors='ignore')
     df = df.drop(failedreion, errors='ignore')
 
-    # print('loading datasets...')
-    # features = df.to_numpy()
-    # dataset_v0 = np.load(f"{base_dir}/metadata/dataset_v0.npy")
-    # dataset_v1 = np.load(f"{base_dir}/metadata/dataset_v1.npy")
+    if config['load_datasets'] == True:
 
-    # print('datasets loaded!')
+        print('loading datasets...')
+        features = df.to_numpy()
+        dataset_v0 = np.load(f"{dir}/dataset_v0.npy")
+        dataset_v1 = np.load(f"{dir}/dataset_v1.npy")
+        dataset_v2 = np.load(f"{dir}/dataset_v2.npy")
 
-    indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
-    test_indices = np.random.randint(0, len(df)-1, int(.2 * len(df)))
-    mask = np.zeros(len(df), dtype=bool)
-    mask[test_indices] = True
-    test_sims = df.index.to_numpy()[mask]
-    train_sims = df.index.to_numpy()[~mask]
+        print('datasets loaded!')
 
-    np.save(f'{dir}/test_sims', test_sims)
-    np.save(f'{dir}/train_sims', train_sims)
+    elif config['load_datasets'] == False:
+        
+        indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
+        test_indices = np.random.randint(0, len(df)-1, int(.2 * len(df)))
+        mask = np.zeros(len(df), dtype=bool)
+        mask[test_indices] = True
+        test_sims = df.index.to_numpy()[mask]
+        train_sims = df.index.to_numpy()[~mask]
 
-    print('forming datasets...')
-    
-    features = df.to_numpy()
-    dataset_v0 = np.zeros((len(features), ells.size))
-    dataset_v1 = np.zeros((len(features), ells.size))
+        np.save(f'{dir}/test_sims', test_sims)
+        np.save(f'{dir}/train_sims', train_sims)
 
-    for i, sn in enumerate(df.index):
-        dataset_v0[i] = utils.spectra(sn, dir='nells30_v2', key='kSZ')
-        dataset_v1[i] = utils.spectra(sn, dir='nells30_v3.1', key='Dell')
+        print('forming datasets...')
+        
+        features = df.to_numpy()
+        dataset_v0 = np.zeros((len(features), ells.size))
+        dataset_v1 = np.zeros((len(features), ells.size))
 
-    np.save(f'{dir}/dataset_v0', dataset_v0)
-    np.save(f'{dir}/dataset_v1', dataset_v1)
-    np.save(f'{dir}/dataset_v2', dataset_v1[:,indices])
+        for i, sn in enumerate(df.index):
+            dataset_v0[i] = utils.spectra(sn, dir='nells30_v2', key='kSZ')
+            dataset_v1[i] = utils.spectra(sn, dir='nells30_v3.1', key='Dell')
+
+        np.save(f'{dir}/dataset_v0', dataset_v0)
+        np.save(f'{dir}/dataset_v1', dataset_v1)
+        np.save(f'{dir}/dataset_v2', dataset_v1[:,indices])
 
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
@@ -187,7 +192,7 @@ def main():
             config['title'] = f"mcmc_run"
             config['emu'] = 'input_emu'
 
-            mcmc_run = MCMC(config, dir=run_dir, emu=emu, verbose=True)
+            mcmc_run = MCMC(config, dir=run_dir, ells=ellsets[j], emu=emu, verbose=True)
             mcmc_run.init_data(savefig=True)
             mcmc_run.init_run()
 

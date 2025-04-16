@@ -204,6 +204,7 @@ def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
 class MCMC:
     def __init__(self,
                     config,
+                    ells=None,
                     p0=None,
                     emu=None,
                     priors=priors,
@@ -225,6 +226,7 @@ class MCMC:
         os.makedirs(self.mcmc_dir)
 
         self.telescope = self.config['survey']
+        self.ells = ells
         self.lmin = self.config['lmin']
         self.lmax = self.config['lmax']
         self.p0 = p0
@@ -403,9 +405,9 @@ class MCMC:
             np.save(f'{self.mcmc_dir}/burnin', burnin_samples)
             np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
             np.save(f'{self.mcmc_dir}/R', R_check.estimates)
-            
+
             fig = corner.corner(sampler.get_chain(flat=True))
-            fig.savefig('corner.png')
+            fig.savefig(f'{self.mcmc_dir}/corner.png')
 
         if self.verbose:
             print('Done, YAY!')
