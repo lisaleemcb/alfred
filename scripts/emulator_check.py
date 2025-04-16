@@ -78,6 +78,7 @@ def main():
         train_sims = np.load(f'{dir}/train_sims.npy', allow_pickle=True)
 
         test_indices = df.index.get_indexer(test_sims)
+        mask = np.zeros(len(df), dtype=bool)
         mask[test_indices] = True
 
         print('datasets loaded!')
