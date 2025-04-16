@@ -64,6 +64,8 @@ def main():
     #df = df.drop(sims_nan, errors='ignore')
     df = df.drop(failedreion, errors='ignore')
 
+
+    indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
     if config['load_datasets'] == True:
 
         print('loading datasets...')
@@ -75,8 +77,7 @@ def main():
         print('datasets loaded!')
 
     elif config['load_datasets'] == False:
-        
-        indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
+
         test_indices = np.random.randint(0, len(df)-1, int(.2 * len(df)))
         mask = np.zeros(len(df), dtype=bool)
         mask[test_indices] = True
@@ -100,6 +101,7 @@ def main():
         np.save(f'{dir}/dataset_v1', dataset_v1)
         np.save(f'{dir}/dataset_v2', dataset_v1[:,indices])
 
+        
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
 
