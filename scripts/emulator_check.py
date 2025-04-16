@@ -74,8 +74,8 @@ def main():
         dataset_v1 = np.load(f"{dir}/dataset_v1.npy")
         dataset_v2 = np.load(f"{dir}/dataset_v2.npy")
 
-        test_sims = np.load(f'{dir}/test_sims', test_sims)
-        train_sims = np.load(f'{dir}/train_sims', train_sims)
+        test_sims = np.load(f'{dir}/test_sims.npy')
+        train_sims = np.load(f'{dir}/train_sims.npy')
 
         test_indices = df.index.get_indexer(test_sims)
         mask[test_indices] = True
