@@ -10,6 +10,7 @@ import joblib
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.callbacks import ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
@@ -110,11 +111,12 @@ class Emulator:
             if self.verbose:
                 print('logging input data...')
 
+            self.sigma_train = self.uncertainties / y_train
+            self.sigma_test = self.uncertainties / y_test
+
             y_train = np.log10(y_train)
             y_test = np.log10(y_test)
 
-            self.sigma_train = self.uncertainties / y_train
-            self.sigma_test = self.uncertainties / y_test
 
         elif not self.log_data:
             self.sigma_train = self.uncertainties
@@ -133,9 +135,13 @@ class Emulator:
             y_train = self.scalerY.fit_transform(y_train)
             y_test = self.scalerY.transform(y_test)
 
-            self.sigma_train = cp.deepcopy(self.sigma_train / self.scalerY.scale_[0])
-            self.sigma_test = cp.deepcopy(self.sigma_test / self.scalerY.scale_[0])
+            self.sigma_train = cp.deepcopy(self.sigma_train / self.scalerY.scale_)
+            self.sigma_test = cp.deepcopy(self.sigma_test / self.scalerY.scale_)
 
+
+        self.n_data = y_train.shape[1]
+        y_train = np.concatenate([y_train, self.sigma_train], axis=1)
+        y_test = np.concatenate([y_test, self.sigma_test], axis=1)
 
         self.X_train = X_train
         self.X_test = X_test
@@ -160,7 +166,7 @@ class Emulator:
     def fancy_plot(self, xvariable):
         # plot Cls true and Cls predicted with errors
 
-        y_test = self.descale(self.y_test)
+        y_test = self.descale(self.y_test[:,:self.n_data])
         y_pred = self.prediction(self.X_test)
 
         new_length = 9991
@@ -281,22 +287,23 @@ class NeuralNetwork(Emulator):
                 Dense(nx, activation='linear')#'softmax' 'sigmoid'
             ])
 
+
             self.model.compile(optimizer='adam',loss='mse', metrics=['accuracy'])
             self.model.compile(optimizer='adam',loss='mse', metrics=[tf.keras.metrics.MeanSquaredError()])
-            self.history = self.model.fit(self.X_train, self.y_train, epochs=600, batch_size=35, validation_data=(self.X_test, self.y_test))
+            self.history = self.model.fit(self.X_train, self.y_train,
+                                        epochs=600, batch_size=35,
+                                        validation_data=(self.X_test, self.y_test))
 
         elif kSZ:
             # Train the model with validation data
-
-            y_train = np.stack([self.y_train, self.sigma_train], axis=1)
-            y_test = np.stack([self.y_test, self.sigma_test], axis=1)
-
+            lr_scheduler = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5)
+            
             self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
         # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-            self.model.add(Dense(units=self.y_train.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
+            self.model.add(Dense(units=self.n_data, activation='linear'))      # Output layer (for regression, no activation function)
             
         #     # Compile the model
             self.model.compile(optimizer='adam', loss=self.weighted_mse_loss)
@@ -305,20 +312,36 @@ class NeuralNetwork(Emulator):
             if self.verbose:
                 verbose = 1
             # Train the model
+
+            print(self.X_train.shape)
+            print(self.y_train.shape)
+            print(self.X_test.shape)
+            print(self.y_test.shape)
             self.history = self.model.fit(self.X_train,
                                             self.y_train,
                                             epochs=self.epochs,
                                             batch_size=32,
+                                            callbacks=[lr_scheduler],
                                             validation_data=(self.X_test, self.y_test),
                                             verbose=verbose)
             
         return
-                                    
-    def weighted_mse_loss(self, y_true, y_pred):
-        y_actual = y_true[:, 0]
-        sigma = y_true[:, 1]
-        return tf.reduce_mean(((y_pred[:, 0] - y_actual) ** 2) / (sigma ** 2))
     
+    def weighted_mse_loss(self, y_true, y_pred):
+        data_true = y_true[:, :self.n_data]   # Extract the true data values
+        sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)
+
+        error = tf.square(y_pred - data_true)
+        weights = 1.0 / (tf.square(sigma_true) + 1e-6)
+        weighted_error = weights * error
+
+        return tf.reduce_mean(weighted_error)
+                                    
+    # def weighted_mse_loss(self, y_true, y_pred):
+    #     sigma = self.sig
+    #     error = tf.square(y_true - y_pred)
+
+    #     return tf.reduce_mean(error / (tf.square(sigma) + 1e-6))
 
     def metrics(self):
         # Evaluate the model
