@@ -373,8 +373,8 @@ class NeuralNetwork(Emulator):
 
         np.savez(f"{path}/{dir}/training_files", X_train=self.descale(self.X_train, X_or_y='X'),
                                                 X_test=self.descale(self.X_test, X_or_y='X'),
-                                                y_train=self.descale(self.y_train), 
-                                                y_test=self.descale(self.y_test),
+                                                y_train=self.descale(self.y_train[:,:self.n_data]), 
+                                                y_test=self.descale(self.y_test[:,:self.n_data]),
                                                 hyperparameters=self.hyperparameters,
                                                 uncertainties=self.uncertainties)
 
