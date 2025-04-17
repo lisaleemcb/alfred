@@ -1,4 +1,5 @@
 import os
+import copy as cp
 import pickle
 import scipy.interpolate
 import numpy as np
@@ -39,18 +40,26 @@ def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
 
 class Emulator:
     """A base class with for kSZ emulator."""
-    def __init__(self, features=None, dataset=None, hyperparameters=None,
-                 splits=None,
-                 data_dir=f'/{home_dir}',
-                 scale_data=True,
-                 X_train=None,
-                 X_test=None,
-                 y_train=None,
-                 y_test=None,
-                 model=None,
-                 log_data=True,
-                 method='Emulator_Base_Class',
-                 verbose=True):
+    def __init__(self, features=None,
+                dataset=None,
+                hyperparameters=None,
+                splits=None,
+                data_dir=f'/{home_dir}',
+                scale_data=True,
+                X_train=None,
+                X_test=None,
+                y_train=None,
+                y_test=None,
+                model=None,
+                log_data=True,
+                method='Emulator_Base_Class',
+                verbose=True):
+
+        if (dataset is None) == (splits is None):
+            raise ValueError("Must provide either full dataset or split data (i.e. [X_train, X_test, y_train, y_test]).")
+        
+        if (dataset is None) != (features is None):
+            raise ValueError("Must provide features corresponding to dataset")
         
         self.dataset = dataset
         self.features = features
@@ -89,13 +98,7 @@ class Emulator:
 
         #     samples[i] = spectra['kSZ']
 
-
         if self.splits is None:
-            if self.log_data:
-                if self.verbose:
-                    print('logging input data...')
-                self.dataset = np.log10(self.dataset)
-
             X_train, X_test, y_train, y_test = train_test_split(self.features,
                                                                 self.dataset,
                                                                 test_size=0.2,
@@ -103,13 +106,20 @@ class Emulator:
         elif self.splits is not None:
             X_train, X_test, y_train, y_test = self.splits
 
-            if self.log_data:
-                if self.verbose:
-                    print('logging input data...')
+        if self.log_data:
+            if self.verbose:
+                print('logging input data...')
 
-                y_train = np.log10(y_train)
-                y_test = np.log10(y_test)
-            
+            y_train = np.log10(y_train)
+            y_test = np.log10(y_test)
+
+            self.sigma_train = self.uncertainties / y_train
+            self.sigma_test = self.uncertainties / y_test
+
+        elif not self.log_data:
+            self.sigma_train = self.uncertainties
+            self.sigma_test = self.uncertainties
+        
         if self.scale_data:
             if self.verbose:
                 print('scaling features and data...')
@@ -122,6 +132,10 @@ class Emulator:
             self.scalerY = StandardScaler()
             y_train = self.scalerY.fit_transform(y_train)
             y_test = self.scalerY.transform(y_test)
+
+            self.sigma_train = cp.deepcopy(self.sigma_train / self.scalerY.scale_[0])
+            self.sigma_test = cp.deepcopy(self.sigma_test / self.scalerY.scale_[0])
+
 
         self.X_train = X_train
         self.X_test = X_test
@@ -240,6 +254,7 @@ class NeuralNetwork(Emulator):
                 self.uncertainties = np.ones_like(self.dataset[0])
             elif self.splits is not None:
                 self.uncertainties = np.ones_like(splits[2][0])
+
     def regress(self, kSZ=True, xe=False):
         if self.verbose:
             print(f"Now running regression with hyperparameters:")
@@ -271,22 +286,10 @@ class NeuralNetwork(Emulator):
             self.history = self.model.fit(self.X_train, self.y_train, epochs=600, batch_size=35, validation_data=(self.X_test, self.y_test))
 
         elif kSZ:
-            def weighted_mse_loss(y_true, y_pred, uncertainty):
-                # Compute squared error
-                squared_error = tf.square(y_true - y_pred)
-                
-                # Weight by uncertainty (inverse of uncertainty)
-                weights = tf.math.reciprocal(uncertainty)  # Higher uncertainty = lower weight
-                
-                # Apply the weights to the squared error
-                weighted_error = squared_error * weights
-                
-                # Return the mean of the weighted error
-                return tf.reduce_mean(weighted_error)
-
-            uncertainty_tensor = tf.convert_to_tensor(self.uncertainties, dtype=tf.float32)
-            
             # Train the model with validation data
+
+            y_train = np.stack([self.y_train, self.sigma_train], axis=1)
+            y_test = np.stack([self.y_test, self.sigma_test], axis=1)
 
             self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
         # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
@@ -296,22 +299,31 @@ class NeuralNetwork(Emulator):
             self.model.add(Dense(units=self.y_train.shape[1], activation='linear'))      # Output layer (for regression, no activation function)
             
         #     # Compile the model
-            self.model.compile(optimizer='adam', loss=lambda y_true, y_pred: weighted_mse_loss(y_true, y_pred, uncertainty_tensor))
+            self.model.compile(optimizer='adam', loss=self.weighted_mse_loss)
             
+            verbose = 0
+            if self.verbose:
+                verbose = 1
             # Train the model
             self.history = self.model.fit(self.X_train,
                                             self.y_train,
                                             epochs=self.epochs,
                                             batch_size=32,
                                             validation_data=(self.X_test, self.y_test),
-                                            verbose=0)
+                                            verbose=verbose)
             
         return
                                     
-        
+    def weighted_mse_loss(self, y_true, y_pred):
+        y_actual = y_true[:, 0]
+        sigma = y_true[:, 1]
+        return tf.reduce_mean(((y_pred[:, 0] - y_actual) ** 2) / (sigma ** 2))
+    
+
     def metrics(self):
         # Evaluate the model
-        loss = self.model.evaluate(self.X_test, self.y_test)
+        y_test = np.stack([self.y_test, self.uncertainties], axis=1)
+        loss = self.model.evaluate(self.X_test, y_test)
         print(f"Test loss: {loss}")
 
         return
