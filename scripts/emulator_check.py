@@ -226,6 +226,10 @@ def main():
             config['title'] = f"mcmc_run"
             config['emu'] = 'input_emu'
 
+            if j==2:
+                if datapoints is not None:
+                    datapoints = datapoints[indices]
+
             # lmask = None
             # if j == 2:
             #     lmask = indices
