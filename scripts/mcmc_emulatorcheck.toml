@@ -1,6 +1,7 @@
 title = 'emulator_check'
 load_datasets = true
-load_emulator = true
+load_emulator = false
+use_data = true
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx

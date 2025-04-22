@@ -112,6 +112,12 @@ def main():
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
 
+    if config['use_data']:
+        datapoints = utils.spectra('11364')
+
+    else:
+        datapoints = None
+
     fig, ax = plt.subplots(1,3, sharey=True, figsize=(12,5))
     fig.subplots_adjust(wspace=0.0)
 
@@ -220,11 +226,11 @@ def main():
             config['title'] = f"mcmc_run"
             config['emu'] = 'input_emu'
 
-            lmask = None
-            if j == 2:
-                lmask = indices
+            # lmask = None
+            # if j == 2:
+            #     lmask = indices
 
-            mcmc_run = MCMC(config, dir=run_dir, ells=ellsets[j], emu=emu, verbose=True)
+            mcmc_run = MCMC(config, dir=run_dir, ells=ellsets[j], emu=emu, datapoints=datapoints, verbose=True)
             mcmc_run.init_data(savefig=True)
             mcmc_run.init_run()
 

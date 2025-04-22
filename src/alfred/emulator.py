@@ -11,6 +11,8 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras.callbacks import ReduceLROnPlateau
+from keras.saving import register_keras_serializable
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
@@ -330,6 +332,7 @@ class NeuralNetwork(Emulator):
             
         return
     
+    @register_keras_serializable()
     def weighted_mse_loss(self, y_true, y_pred):
         data_true = y_true[:, :self.n_data]   # Extract the true data values
         sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)

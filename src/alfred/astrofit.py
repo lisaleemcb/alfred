@@ -206,6 +206,7 @@ class MCMC:
                     config,
                     ells=None,
                     lmask=None,
+                    datapoints=None,
                     p0=None,
                     emu=None,
                     priors=priors,
@@ -228,6 +229,7 @@ class MCMC:
 
         self.telescope = self.config['survey']
         self.ells = ells
+        self.datapoints = datapoints
 
         if lmask is not None:
             self.lmask = lmask
@@ -288,7 +290,12 @@ class MCMC:
             self.truths[pname] = self.config[pname]
 
         self.theta_true = np.asarray(list(self.truths.values()))
-        self.datapoints = emulator.kemu(self.theta_true, **self.emu)
+
+        if self.datapoints is None:
+            if self.verbose:
+                print('Using real inputted data for datapoints')
+            self.datapoints = emulator.kemu(self.theta_true, **self.emu)
+
         self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
 
