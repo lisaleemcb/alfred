@@ -205,6 +205,7 @@ class MCMC:
     def __init__(self,
                     config,
                     ells=None,
+                    lmask=None,
                     p0=None,
                     emu=None,
                     priors=priors,
@@ -227,8 +228,14 @@ class MCMC:
 
         self.telescope = self.config['survey']
         self.ells = ells
-        self.lmin = self.config['lmin']
-        self.lmax = self.config['lmax']
+
+        if lmask is not None:
+            self.lmask = lmask
+        else:
+            self.lmin = self.config['lmin']
+            self.lmax = self.config['lmax']
+            self.lmask = np.where((self.lmin < self.ells) & (self.ells < self.lmax))[0]
+
         self.p0 = p0
         if self.config['emu'] == 'v2':
             print(f"using emu: {self.config['emu']}")
@@ -281,13 +288,12 @@ class MCMC:
             self.truths[pname] = self.config[pname]
 
         self.theta_true = np.asarray(list(self.truths.values()))
-        self.lmask = np.where((self.lmin < ells) & (ells < self.lmax))[0]
         self.datapoints = emulator.kemu(self.theta_true, **self.emu)
-        self.err_cov = surveys.error_cov(ells, self.datapoints, surveys.telescopes[self.telescope])
+        self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
 
         if savefig:
-            ax.plot(ells, self.datapoints, color='green', alpha=.3)
+            ax.plot(self.ells, self.datapoints, color='green', alpha=.3)
 
         if self.addnoise:
             if self.verbose:
@@ -295,11 +301,16 @@ class MCMC:
 
             self.datapoints = self.datapoints + np.random.normal(scale=self.err)
 
+        self.ells = self.ells[self.lmask]
         self.datapoints = self.datapoints[self.lmask]
         self.err = self.err[self.lmask]
 
+        print(f"ells: {self.ells.shape}")
+        print(f"datapoints: {self.datapoints.shape}")
+        print(f"err: {self.err.shape}")
+
         if savefig:
-            ax.errorbar(ells[self.lmask], self.datapoints, color='deeppink', marker='.', ls='', yerr=self.err)
+            ax.errorbar(self.ells, self.datapoints, color='deeppink', marker='.', ls='', yerr=self.err)
             ax.set_xlabel('ell')
             ax.set_ylabel('Dell')
 
@@ -343,8 +354,8 @@ class MCMC:
         np.savez(f"{self.mcmc_dir}/data", truths=self.truths, datapoints=self.datapoints, err=self.err)
 
         if self.verbose:
-            plt.plot(ells[self.lmask], self.model(self.theta_true))
-            plt.errorbar(ells[self.lmask], self.datapoints.flatten(), marker='.', ls='', yerr=self.err)
+            plt.plot(self.ells, self.model(self.theta_true))
+            plt.errorbar(self.ells, self.datapoints.flatten(), marker='.', ls='', yerr=self.err)
 
         chains_fn = f"{self.mcmc_dir}/saved_chains.h5"
         save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)

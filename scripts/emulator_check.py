@@ -161,45 +161,67 @@ def main():
         for j, data in enumerate(datasets):
             label_data = f"dataset_v{j}"
 
+            if j==0:
+                continue
+            if j==1:
+                continue
+
             print('====================================================================')
             print(f"Running analysis with {label_emu} and {label_data}")
             print('====================================================================')
 
             run_dir = f"{dir}/{label_emu}_{label_data}"
-            os.mkdir(run_dir)
 
-            print(hp)
-            hp['uncertainties'] = uncertainties[i][j]
+            if config['load_emulator']:
+                scalerX_ = joblib.load(f"{run_dir}/nn_emulator/scalerX.pkl")
+                scalerY = joblib.load(f"{run_dir}/nn_emulator/scalerY.pkl")
+                model = tf.keras.models.load_model(f"{run_dir}/nn_emulator/model.keras")
 
-            nn = emulator.NeuralNetwork(hp, splits=splits[j],
-                    scale_data=True, log_data=True, verbose=True)
-            nn.prep_data()
-            nn.regress()
+                emu = {'scalerX': scalerX,
+                    'scalerY': scalerY,
+                    'model': model}
+   
 
-            fig, ax = plt.subplots()
+            else:
+                os.mkdir(run_dir)
 
-            ax.plot(nn.history.history['val_loss'], label='Validation Loss')
-            ax.loglog(nn.history.history['loss'], label='Training Loss', alpha=0.5)
+                print(f"Print using inputs settings: \n\t{hp}")
+                hp['uncertainties'] = uncertainties[i][j]
 
-            ax.set_xlabel('Epoch')
+                nn = emulator.NeuralNetwork(hp, splits=splits[j],
+                        scale_data=True, log_data=True, verbose=True)
+                nn.prep_data()
+                nn.regress()
 
-            ax.set_title(f'emulator v{i}, dataset v{j}')
-            ax.set_ylabel('Loss')
+                fig, ax = plt.subplots()
 
-            fig.suptitle('Model Loss')
-            fig.legend()
-            fig.savefig(f"{run_dir}/modelloss_{label_emu}_{label_data}")
+                ax.plot(nn.history.history['val_loss'], label='Validation Loss')
+                ax.loglog(nn.history.history['loss'], label='Training Loss', alpha=0.5)
 
-            nn.save(f"nn_emulator", path=run_dir)
+                ax.set_xlabel('Epoch')
 
-            emu = {'scalerX': nn.scalerX,
-                   'scalerY': nn.scalerY,
-                   'model': nn.model}
+                ax.set_title(f'emulator v{i}, dataset v{j}')
+                ax.set_ylabel('Loss')
 
-            print(f"Finished constructing emulator for {label_emu} and {label_data}, now running MCMC")
+                fig.suptitle('Model Loss')
+                fig.legend()
+                fig.savefig(f"{run_dir}/modelloss_{label_emu}_{label_data}")
+
+                nn.save(f"nn_emulator", path=run_dir)
+
+                print(f"Finished constructing emulator for {label_emu} and {label_data}, now running MCMC")
+
+                emu = {'scalerX': nn.scalerX,
+                    'scalerY': nn.scalerY,
+                    'model': nn.model}
+
 
             config['title'] = f"mcmc_run"
             config['emu'] = 'input_emu'
+
+            lmask = None
+            if j == 2:
+                lmask = indices
 
             mcmc_run = MCMC(config, dir=run_dir, ells=ellsets[j], emu=emu, verbose=True)
             mcmc_run.init_data(savefig=True)

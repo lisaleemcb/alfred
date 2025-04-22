@@ -140,6 +140,9 @@ class Emulator:
 
 
         self.n_data = y_train.shape[1]
+
+        print(f'train shape: {y_train.shape}')
+        print(f'test shape: {y_test.shape}')
         y_train = np.concatenate([y_train, self.sigma_train], axis=1)
         y_test = np.concatenate([y_test, self.sigma_test], axis=1)
 
