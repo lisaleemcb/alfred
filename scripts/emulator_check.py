@@ -173,7 +173,8 @@ def main():
             run_dir = f"{dir}/{label_emu}_{label_data}"
 
             if config['load_emulator']:
-                scalerX_ = joblib.load(f"{run_dir}/nn_emulator/scalerX.pkl")
+                print(f'loading emulator from file in {run_dir}...')
+                scalerX = joblib.load(f"{run_dir}/nn_emulator/scalerX.pkl")
                 scalerY = joblib.load(f"{run_dir}/nn_emulator/scalerY.pkl")
                 model = tf.keras.models.load_model(f"{run_dir}/nn_emulator/model.keras")
 
