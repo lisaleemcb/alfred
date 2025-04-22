@@ -333,7 +333,7 @@ class NeuralNetwork(Emulator):
         return
     
     @register_keras_serializable()
-    def weighted_mse_loss(self, y_true, y_pred):
+    def weighted_mse_loss(y_true, y_pred):
         data_true = y_true[:, :self.n_data]   # Extract the true data values
         sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)
 
