@@ -310,8 +310,19 @@ class NeuralNetwork(Emulator):
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
             self.model.add(Dense(units=self.n_data, activation='linear'))      # Output layer (for regression, no activation function)
             
+            @register_keras_serializable()
+            def weighted_mse_loss(y_true, y_pred):
+                data_true = y_true[:, :self.n_data]   # Extract the true data values
+                sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)
+
+                error = tf.square(y_pred - data_true)
+                weights = 1.0 / (tf.square(sigma_true) + 1e-6)
+                weighted_error = weights * error
+
+                return tf.reduce_mean(weighted_error)
+                                    
         #     # Compile the model
-            self.model.compile(optimizer='adam', loss=self.weighted_mse_loss)
+            self.model.compile(optimizer='adam', loss=weighted_mse_loss)
             
             verbose = 0
             if self.verbose:
@@ -331,18 +342,7 @@ class NeuralNetwork(Emulator):
                                             verbose=verbose)
             
         return
-    
-    @register_keras_serializable()
-    def weighted_mse_loss(y_true, y_pred):
-        data_true = y_true[:, :self.n_data]   # Extract the true data values
-        sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)
 
-        error = tf.square(y_pred - data_true)
-        weights = 1.0 / (tf.square(sigma_true) + 1e-6)
-        weighted_error = weights * error
-
-        return tf.reduce_mean(weighted_error)
-                                    
     # def weighted_mse_loss(self, y_true, y_pred):
     #     sigma = self.sig
     #     error = tf.square(y_true - y_pred)
