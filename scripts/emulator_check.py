@@ -169,8 +169,7 @@ def main():
 
             if j==0:
                 continue
-            if j==1:
-                continue
+
 
             print('====================================================================')
             print(f"Running analysis with {label_emu} and {label_data}")
