@@ -53,7 +53,7 @@ def main():
     print(f"Now initialising mcmc run {config['title']}...")
     print()
 
-    dir = f"{base_dir}/inference/emulator_tests"
+    dir = f"{base_dir}/inference/emulator_tests_newtrainingset"
 
     failedreion = np.load(f'{base_dir}/metadata/sims_failed.npy')
     sims = utils.get_sims('nells30_v3.1', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
@@ -112,9 +112,11 @@ def main():
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
 
+
+    sn = '11364'
     if config['use_data']:
         print('using calculated spectra as datapoints...')
-        datapoints = utils.spectra('11364')
+        datapoints = utils.spectra(sn)
 
     else:
         datapoints = None
@@ -170,7 +172,6 @@ def main():
 
             if j==0:
                 continue
-
 
             print('====================================================================')
             print(f"Running analysis with {label_emu} and {label_data}")

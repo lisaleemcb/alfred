@@ -22,3 +22,6 @@ toml
 # then install with pip ('pip install -e .' while in package dir)
 # git+https://github.com/lisaleemcb/catwoman.git
 # this package (alfred)
+# https://github.com/CMB-HD/hdlike/tree/main?tab=readme-ov-file
+# https://github.com/CMB-HD/hdMockData
+

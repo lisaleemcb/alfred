@@ -1,7 +1,7 @@
 title = 'emulator_check'
-load_datasets = true
+load_datasets = false
 load_emulator = false
-use_data = true
+use_data = false
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -28,7 +28,7 @@ lmax = 15000
 addnoise = false
 
 # emulator
-emu = 'v2'
+#emu = 'v2'
 
 # mcmc
 nwalkers = 12
@@ -39,11 +39,11 @@ add2d = true
 addPlanck = false
 vectorize = true
 
-# parameters
+# parameters, currently matching simulation 11364
 which_params_to_fit = ['tau', 'Mmin', 'fesc']
-fX = -2.72
-rHS =  0.50
-tau = 3.44
-Mmin = 8.80
-fesc = 0.27
 
+fX = -2.71669877
+rHS =  0.40
+tau = 3.49899936
+Mmin = 8.80
+fesc = 0.275
