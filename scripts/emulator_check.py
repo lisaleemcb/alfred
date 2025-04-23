@@ -113,6 +113,7 @@ def main():
     ellsets = [ells, ells, ells[indices]]
 
     if config['use_data']:
+        print('using calculated spectra as datapoints...')
         datapoints = utils.spectra('11364')
 
     else:
