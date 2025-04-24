@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 #import pandas as pd
 
 import joblib
+import keras
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Dense
@@ -40,6 +41,30 @@ def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
         Y = Y.flatten()
 
     return Y
+
+@register_keras_serializable(package="Custom")
+class WeightedMSELoss(keras.losses.Loss):
+    def __init__(self, ndata, **kwargs):
+        super().__init__(**kwargs)
+        self.ndata = ndata
+
+    def call(self, y_true, y_pred):
+        data_true = y_true[:, :self.ndata]   # Extract the true data values
+        sigma_true = y_true[:, self.ndata:]  # Extract the uncertainty (sigma)
+
+        mse = tf.reduce_mean(tf.square(y_pred - data_true))
+
+        weights = 1.0 / (tf.square(sigma_true) + 1e-6)
+        weighted_mse = tf.reduce_mean(weights * tf.square(y_pred - data_true))
+
+        is_all_zeros = tf.reduce_all(tf.equal(sigma_true, 0.0))
+
+        return tf.cond(is_all_zeros, lambda: mse, lambda: weighted_mse)
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({"ndata": self.ndata})
+        return config
 
 class Emulator:
     """A base class with for kSZ emulator."""
@@ -141,10 +166,10 @@ class Emulator:
             self.sigma_test = cp.deepcopy(self.sigma_test / self.scalerY.scale_)
 
 
-        self.n_data = y_train.shape[1]
+        self.ndata = y_train.shape[1]
 
-        print(f'train shape: {y_train.shape}')
-        print(f'test shape: {y_test.shape}')
+        # print(f'train shape: {y_train.shape}')
+        # print(f'test shape: {y_test.shape}')
         y_train = np.concatenate([y_train, self.sigma_train], axis=1)
         y_test = np.concatenate([y_test, self.sigma_test], axis=1)
 
@@ -171,7 +196,7 @@ class Emulator:
     def fancy_plot(self, xvariable):
         # plot Cls true and Cls predicted with errors
 
-        y_test = self.descale(self.y_test[:,:self.n_data])
+        y_test = self.descale(self.y_test[:,:self.ndata])
         y_pred = self.prediction(self.X_test)
 
         new_length = 9991
@@ -260,11 +285,14 @@ class NeuralNetwork(Emulator):
         self.epochs = self.hyperparameters['epochs']
         self.uncertainties = self.hyperparameters['uncertainties']
 
+                
+        self.ndata = None
+
         if self.uncertainties is None:
             if self.dataset is not None:
-                self.uncertainties = np.ones_like(self.dataset[0])
+                self.uncertainties = np.zeros_like(self.dataset[0])
             elif self.splits is not None:
-                self.uncertainties = np.ones_like(splits[2][0])
+                self.uncertainties = np.zeros_like(splits[2][0])
 
     def regress(self, kSZ=True, xe=False):
         if self.verbose:
@@ -308,31 +336,22 @@ class NeuralNetwork(Emulator):
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
             self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-            self.model.add(Dense(units=self.n_data, activation='linear'))      # Output layer (for regression, no activation function)
-            
-            @register_keras_serializable()
-            def weighted_mse_loss(y_true, y_pred):
-                data_true = y_true[:, :self.n_data]   # Extract the true data values
-                sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)
-
-                error = tf.square(y_pred - data_true)
-                weights = 1.0 / (tf.square(sigma_true) + 1e-6)
-                weighted_error = weights * error
-
-                return tf.reduce_mean(weighted_error)
+            self.model.add(Dense(units=self.ndata, activation='linear'))      # Output layer (for regression, no activation function)
                                     
+
+            loss_function = WeightedMSELoss(ndata=self.ndata)
         #     # Compile the model
-            self.model.compile(optimizer='adam', loss=weighted_mse_loss)
+            self.model.compile(optimizer='adam', loss=loss_function)
             
             verbose = 0
             if self.verbose:
                 verbose = 1
             # Train the model
 
-            print(self.X_train.shape)
-            print(self.y_train.shape)
-            print(self.X_test.shape)
-            print(self.y_test.shape)
+            # print(self.X_train.shape)
+            # print(self.y_train.shape)
+            # print(self.X_test.shape)
+            # print(self.y_test.shape)
             self.history = self.model.fit(self.X_train,
                                             self.y_train,
                                             epochs=self.epochs,
@@ -342,6 +361,17 @@ class NeuralNetwork(Emulator):
                                             verbose=verbose)
             
         return
+    
+    # @register_keras_serializable()
+    # def weighted_mse_loss(y_true, y_pred, n_data=2):
+    #     data_true = y_true[:, :self.n_data]   # Extract the true data values
+    #     sigma_true = y_true[:, self.n_data:]  # Extract the uncertainty (sigma)
+
+    #     error = tf.square(y_pred - data_true)
+    #     weights = 1.0 / (tf.square(sigma_true) + 1e-6)
+    #     weighted_error = weights * error
+
+    #     return tf.reduce_mean(weighted_error)
 
     # def weighted_mse_loss(self, y_true, y_pred):
     #     sigma = self.sig
@@ -379,8 +409,8 @@ class NeuralNetwork(Emulator):
 
         np.savez(f"{path}/{dir}/training_files", X_train=self.descale(self.X_train, X_or_y='X'),
                                                 X_test=self.descale(self.X_test, X_or_y='X'),
-                                                y_train=self.descale(self.y_train[:,:self.n_data]), 
-                                                y_test=self.descale(self.y_test[:,:self.n_data]),
+                                                y_train=self.descale(self.y_train[:,:self.ndata]), 
+                                                y_test=self.descale(self.y_test[:,:self.ndata]),
                                                 hyperparameters=self.hyperparameters,
                                                 uncertainties=self.uncertainties)
 

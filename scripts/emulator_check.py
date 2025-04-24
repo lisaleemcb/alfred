@@ -19,6 +19,7 @@ import alfred.peefit as peefit
 import alfred.surveys as surveys
 
 import joblib
+import keras
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
 
@@ -53,8 +54,11 @@ def main():
     print(f"Now initialising mcmc run {config['title']}...")
     print()
 
-    dir = f"{base_dir}/inference/emulator_tests_newtrainingset"
+    dir = f"{base_dir}/inference/emulator_tests"
 
+    print(f"config settings are:")
+    print(f"\t{config}")
+    print()
     failedreion = np.load(f'{base_dir}/metadata/sims_failed.npy')
     sims = utils.get_sims('nells30_v3.1', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
 
@@ -169,10 +173,11 @@ def main():
         for j, data in enumerate(datasets):
             label_data = f"dataset_v{j}"
 
-            if j==0:
-                continue
 
-            if i==0:
+            # if i==0:
+            #     continue
+
+            if j==0:
                 continue
 
             print('====================================================================')
@@ -183,9 +188,12 @@ def main():
 
             if config['load_emulator']:
                 print(f'loading emulator from file in {run_dir}...')
+
+                from alfred.emulator import WeightedMSELoss
+
                 scalerX = joblib.load(f"{run_dir}/nn_emulator/scalerX.pkl")
                 scalerY = joblib.load(f"{run_dir}/nn_emulator/scalerY.pkl")
-                model = tf.keras.models.load_model(f"{run_dir}/nn_emulator/model.keras")
+                model = keras.models.load_model(f"{run_dir}/nn_emulator/model.keras")
 
                 emu = {'scalerX': scalerX,
                     'scalerY': scalerY,
@@ -226,22 +234,22 @@ def main():
                     'model': nn.model}
 
 
-            config['title'] = f"mcmc_run"
-            config['emu'] = 'input_emu'
+            # config['title'] = f"mcmc_run"
+            # config['emu'] = 'input_emu'
 
-            if j==2:
-                if datapoints is not None:
-                    datapoints = datapoints[indices]
+            # if j==2:
+            #     if datapoints is not None:
+            #         datapoints = datapoints[indices]
 
-            # lmask = None
-            # if j == 2:
-            #     lmask = indices
+            # # lmask = None
+            # # if j == 2:
+            # #     lmask = indices
 
-            mcmc_run = MCMC(config, dir=run_dir, ells=ellsets[j], emu=emu, datapoints=datapoints, verbose=True)
-            mcmc_run.init_data(savefig=True)
-            mcmc_run.init_run()
+            # mcmc_run = MCMC(config, dir=run_dir, ells=ellsets[j], emu=emu, datapoints=datapoints, verbose=True)
+            # mcmc_run.init_data(savefig=True)
+            # mcmc_run.init_run()
 
-            mcmc_run.start_run(save=True)
+            # mcmc_run.start_run(save=True)
 
 
 if __name__ == "__main__":
