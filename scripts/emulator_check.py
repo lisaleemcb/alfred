@@ -112,7 +112,6 @@ def main():
     datasets = [dataset_v0, dataset_v1, dataset_v1[:,indices]]
     ellsets = [ells, ells, ells[indices]]
 
-
     sn = '11364'
     if config['use_data']:
         print('using calculated spectra as datapoints...')
@@ -171,6 +170,9 @@ def main():
             label_data = f"dataset_v{j}"
 
             if j==0:
+                continue
+
+            if i==0:
                 continue
 
             print('====================================================================')
