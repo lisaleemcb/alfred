@@ -54,7 +54,7 @@ def main():
     print(f"Now initialising mcmc run {config['title']}...")
     print()
 
-    dir = f"{base_dir}/inference/emulator_tests_run1"
+    dir = f"{base_dir}/inference/emulator_tests"
     print(f"Saving analysis to {dir}...")
 
     print(f"config settings are:")
@@ -210,7 +210,7 @@ def main():
                         scale_data=True, log_data=True, verbose=True)
                 nn.prep_data()
                 nn.regress()
-
+ 
                 fig, ax = plt.subplots()
 
                 ax.plot(nn.history.history['val_loss'], label='Validation Loss')
