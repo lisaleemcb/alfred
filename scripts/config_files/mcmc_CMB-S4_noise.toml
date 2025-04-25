@@ -1,4 +1,4 @@
-title = 'CMB-S4'
+title = 'CMB-S4_noise'
 load_datasets = true
 load_emulator = true
 
@@ -23,7 +23,7 @@ redshift_fn = 'metadata/redshift_list.dat'
 survey = 'CMB-S4'
 lmin = 1000
 lmax = 15000
-addnoise = false
+addnoise = true
 use_data = true
 sn = '11364'
 

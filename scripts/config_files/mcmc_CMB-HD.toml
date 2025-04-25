@@ -1,4 +1,7 @@
 title = 'CMB-HD'
+load_datasets = true
+load_emulator = true
+
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -22,21 +25,23 @@ survey = 'CMB-HD'
 lmin = 1000
 lmax = 15000
 addnoise = false
+use_data = true
+sn = '11364'
 
 # emulator
-emu = 'v2'
+emu = 'v3'
 
 # mcmc
 nwalkers = 12
-burnin = 500
-nsteps = 10000
+burnin = 1000
+nsteps = 5000
 rescale_cov = 0.1
 add2d = true
 addPlanck = false
 vectorize = true
 
 # parameters
-which_params_to_fit = 'all' # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
+which_params_to_fit = ['tau', 'Mmin', 'fesc'] # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
 fX = -2.72
 rHS =  0.50
 tau = 3.44

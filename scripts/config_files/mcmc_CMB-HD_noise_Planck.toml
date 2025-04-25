@@ -1,6 +1,8 @@
-title = 'CMB-S4'
+title = 'CMB-HD_noise_Planck'
 load_datasets = true
 load_emulator = true
+
+
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -20,10 +22,10 @@ ion_fn = 'metadata/ion_histories_full.npz'
 redshift_fn = 'metadata/redshift_list.dat'
 
 # data config
-survey = 'CMB-S4'
+survey = 'CMB-HD'
 lmin = 1000
 lmax = 15000
-addnoise = false
+addnoise = true
 use_data = true
 sn = '11364'
 
@@ -36,11 +38,11 @@ burnin = 1000
 nsteps = 5000
 rescale_cov = 0.1
 add2d = true
-addPlanck = false
+addPlanck = true
 vectorize = true
 
 # parameters
-which_params_to_fit = ['tau', 'Mmin', 'fesc']
+which_params_to_fit = ['tau', 'Mmin', 'fesc'] # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
 fX = -2.72
 rHS =  0.50
 tau = 3.44
