@@ -40,23 +40,15 @@ def error_cov(ells, datapoints, telescope,
     if include_samplevar:
         sample_var = surveys.sample_var(ells, datapoints, telescope)**2
         errors.append(sample_var)
-        print(sample_var.shape)
-        print(f"sample var: {sample_var}")
-        print
     if include_noise:
         noise = (surveys.noise(ells, telescope, pol=False)/np.sqrt(delta_ell))**2
-        print(noise.shape)
-        print(f"noise: {noise}")
-        print()
         errors.append(noise)
     if include_emulator:
         err = np.load(emuerr_file)
         ells_emu = alfred.astrofit.ells
         emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
-        print(emu_err.shape)
         emu_err = np.interp(ells, ells_emu, emu_err)
-        print(f"emu_err: {emu_err}")
-        print()
+
         errors.append(emu_err)
 
         print(errors)

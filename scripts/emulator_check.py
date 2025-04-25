@@ -54,7 +54,8 @@ def main():
     print(f"Now initialising mcmc run {config['title']}...")
     print()
 
-    dir = f"{base_dir}/inference/emulator_tests"
+    dir = f"{base_dir}/inference/emulator_tests_run1"
+    print(f"Saving analysis to {dir}...")
 
     print(f"config settings are:")
     print(f"\t{config}")
@@ -156,23 +157,22 @@ def main():
                           'epochs': 100}
     
     hyperparameters_v1 = {'neurons': 1024,
-                          'epochs': 500}
+                          'epochs': 100}
     
     hyperparameters_v2 = {'neurons': 1024,
-                          'epochs': 500}
+                          'epochs': 100}
     
     hyperparameters_v3 = {'neurons': 1024,
-                          'epochs': 500}
+                          'epochs': 100}
 
     
     hps = [hyperparameters_v0, hyperparameters_v1, hyperparameters_v2, hyperparameters_v3]
    
-    for i, hp in enumerate(hps):
-        label_emu = f"emu_v{i}"
+    for j, data in enumerate(datasets):
+        label_data = f"dataset_v{j}"
 
-        for j, data in enumerate(datasets):
-            label_data = f"dataset_v{j}"
-
+        for i, hp in enumerate(hps):
+            label_emu = f"emu_v{i}"
 
             # if i==0:
             #     continue

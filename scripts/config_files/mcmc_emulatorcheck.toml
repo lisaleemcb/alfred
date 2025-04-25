@@ -1,6 +1,6 @@
 title = 'emulator_check'
 load_datasets = true
-load_emulator = false
+load_emulator = true
 use_data = false
 
 # # files paths
