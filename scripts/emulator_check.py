@@ -54,7 +54,7 @@ def main():
     print(f"Now initialising mcmc run {config['title']}...")
     print()
 
-    dir = f"{base_dir}/inference/emulator_tests"
+    dir = f"{base_dir}/inference/emulator_tests_run2"
     print(f"Saving analysis to {dir}...")
 
     print(f"config settings are:")
