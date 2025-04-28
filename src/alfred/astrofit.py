@@ -30,7 +30,6 @@ telescopes ={
     'CMB-HD': {'fsky':0.5, 'fwhm':0.5, 'noise':2.7},
 }
 
-
 delta_ell = np.mean(np.diff(ells))
 indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
 Planck = 0.054
@@ -293,8 +292,11 @@ class MCMC:
 
         if self.datapoints is None:
             if self.verbose:
-                print('Using real inputted data for datapoints')
+                print('Using emulated data for datapoints')
             self.datapoints = emulator.kemu(self.theta_true, **self.emu)
+        else:
+            if self.verbose:
+                print('Using real data for datapoints')
 
         self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))

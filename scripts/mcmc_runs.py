@@ -61,6 +61,7 @@ def main():
         print()
       
         config['use_data'] = False
+
         if config['use_data']:
             print(f"using calculated spectra from simu{config['sn']} as datapoints...")
             datapoints = utils.spectra(config['sn'])[indices]
@@ -91,6 +92,8 @@ def main():
             if testing:
                 config['burnin'] = 10
                 config['nsteps'] = 10
+
+            config['emu'] = 'input_emu'
        
             print(f"Finished loading emulator, now running MCMC...")
 
