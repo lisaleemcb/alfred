@@ -52,17 +52,18 @@ def main():
         print(f"Now initialising mcmc run {config['title']}...")
         print()
 
-        dir = f"{base_dir}/inference/mcmc_runs"
+        dir = f"{base_dir}/inference/mcmc_runs_run2_notdata"
         
         print(f"Saving analysis to {dir}...")
 
         print(f"config settings are:")
         print(f"\t{config}")
         print()
-       
+      
+        config['use_data'] = False
         if config['use_data']:
             print(f"using calculated spectra from simu{config['sn']} as datapoints...")
-            datapoints = utils.spectra(config['sn'])
+            datapoints = utils.spectra(config['sn'])[indices]
 
         else:
             datapoints = None
@@ -86,14 +87,14 @@ def main():
                 'scalerY': scalerY,
                 'model': model}
             
-            testing = True
+            testing = False
             if testing:
                 config['burnin'] = 10
                 config['nsteps'] = 10
        
             print(f"Finished loading emulator, now running MCMC...")
 
-            mcmc_run = MCMC(config, ells=ells[indices], emu=emu, datapoints=datapoints[indices], verbose=True)
+            mcmc_run = MCMC(config, dir=dir, ells=ells[indices], emu=emu, datapoints=datapoints, verbose=True)
             mcmc_run.init_data(savefig=True)
             mcmc_run.init_run()
 
