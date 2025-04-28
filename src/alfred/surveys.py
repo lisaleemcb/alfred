@@ -14,8 +14,6 @@ telescopes ={
 }
 
 def sample_var(ls, dl, telescope, bin_width=100):
-    print(f"ls: {ls.shape}")
-    print(f"dl: {dl.shape}")
     if np.shape(ls) != np.shape(dl):
         raise ValueError('ls and dl must have the same shape.')
     dDl = dl * np.sqrt(2./telescope['fsky']/(2.*ls+1.))

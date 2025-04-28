@@ -200,6 +200,42 @@ def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
 
     return -0.5 * (data[lmask] - guess_model[lmask]) ** 2.0 / err[lmask]**2.0
 
+def gelman_rubin_rhat(chains):
+    """
+    Compute the Gelman-Rubin R-hat statistic for convergence diagnostics.
+    
+    Parameters:
+        chains (ndarray): Shape (n_walkers, n_samples, n_params), where:
+            - n_walkers: Number of MCMC chains (walkers)
+            - n_samples: Number of samples per chain
+            - n_params: Number of parameters
+
+    Returns:
+        rhat (ndarray): R-hat values for each parameter.
+    """
+    chains = np.array(chains)  # Ensure it's an ndarray
+    n_walkers, n_samples, n_params = chains.shape
+
+    # Compute the mean of each chain (shape: n_walkers, n_params)
+    chain_means = np.mean(chains, axis=1)
+
+    # Compute the variance of each chain (shape: n_walkers, n_params)
+    chain_variances = np.var(chains, axis=1, ddof=1)
+
+    # Compute the between-chain variance (B)
+    B = np.var(chain_means, axis=0, ddof=1) * n_samples  # Shape: (n_params,)
+
+    # Compute the within-chain variance (W)
+    W = np.mean(chain_variances, axis=0)  # Shape: (n_params,)
+
+    # Compute the estimated variance of the target distribution
+    var_hat = (W * (n_samples - 1) / n_samples) + (B / n_samples)
+
+    # Compute the Gelman-Rubin R-hat statistic
+    rhat = np.sqrt(var_hat / W)
+
+    return rhat
+
 class MCMC:
     def __init__(self,
                     config,
