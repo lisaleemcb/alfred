@@ -154,16 +154,16 @@ def main():
     uncertainties = [[None, None, None], [None, None, None], CVs, CV_n_noise]
 
     hyperparameters_v0 = {'neurons': 500,
-                          'epochs': 100}
+                          'epochs': 30}
     
     hyperparameters_v1 = {'neurons': 1024,
-                          'epochs': 100}
+                          'epochs': 30}
     
     hyperparameters_v2 = {'neurons': 1024,
-                          'epochs': 100}
+                          'epochs': 30}
     
     hyperparameters_v3 = {'neurons': 1024,
-                          'epochs': 100}
+                          'epochs': 30}
 
     
     hps = [hyperparameters_v0, hyperparameters_v1, hyperparameters_v2, hyperparameters_v3]
