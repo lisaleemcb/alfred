@@ -193,12 +193,10 @@ def lnlike(theta, model, data, err):
     return -0.5 * ((data - test) ** 2.0 / err**2.0).sum(axis=1)
 
 
-def chi2_contribution(theta, data, err, lmask=None, emu=None, sn=None):
-    if lmask is None:
-        lmask = range(data.size) # want every ell in this case
-    guess_model = emulator.kemu(theta, **emu)
-
-    return -0.5 * (data[lmask] - guess_model[lmask]) ** 2.0 / err[lmask]**2.0
+def chi2_contribution(theta, test, data, err,truths=None, which_params='all'):
+   # theta = fill(guess, truths, which_params)
+   # test = model(theta)
+    return ((data - test) ** 2.0 / err**2.0)
 
 def gelman_rubin_rhat(chains):
     """
