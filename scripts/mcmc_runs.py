@@ -40,12 +40,13 @@ def main():
     print("MCMC RUNS")
     print('========================================================')
 
-    config_files = [f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4.toml",
+    config_files = [f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD.toml",
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise.toml", 
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise_Planck.toml"
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4.toml",
                     f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_noise.toml",
                     f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_noise_Planck.toml",
-                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD.toml",
-                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise.toml", 
-                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise_Planck.toml"]
+]
     
     for config_i, c in enumerate(config_files):
         if config_i == 3:
@@ -53,7 +54,7 @@ def main():
             print(f"Now initialising mcmc run {config['title']}...")
             print()
 
-            dir = f"{base_dir}/inference/mcmc_runs_check"
+            dir = f"{base_dir}/inference/mcmc_runs"
             
             print(f"Saving analysis to {dir}...")
 
