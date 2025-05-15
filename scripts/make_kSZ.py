@@ -161,6 +161,7 @@ def main():
 
         sim = Cat(sn,
                     skip_early=True,
+                    base_dir=base_dir,
                     path_spectra='spectra',
                     load_spectra=True,
                     LoReLi_format=False,
