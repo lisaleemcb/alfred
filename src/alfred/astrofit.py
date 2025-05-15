@@ -141,9 +141,14 @@ def lnprior(theta, truths, priors,
         xemu = keras_xe_emul.xe_emul_array(ztau, theta, plot=False)
         tau = xe2tau(ztau, xemu)[:,-1]
 
-        passPlanck =  ((Planck - 2.0*Planck_err) <= tau) & (tau <= (Planck + 2.0*Planck_err))
+        print(tau.shape)
 
-    passes = pass1d & pass2d & passPlanck
+        passPlanck =  (Planck * np.ones_like(tau) - tau)**2.0 / (Planck_err* np.ones_like(tau))**2.0
+        print(passPlanck)
+
+    passes = pass1d & pass2d
+    passes = np.where(passes, 0, -np.inf)
+    passes += passPlanck
 
     return np.where(passes, 0, -np.inf)
 
@@ -190,6 +195,7 @@ def lnprob(guess, model, data, err, truths, priors,
 
 def lnlike(theta, model, data, err):
     test = model(theta)
+
     return -0.5 * ((data - test) ** 2.0 / err**2.0).sum(axis=1)
 
 
@@ -269,7 +275,7 @@ class MCMC:
         else:
             self.lmin = self.config['lmin']
             self.lmax = self.config['lmax']
-            self.lmask = np.where((self.lmin < self.ells) & (self.ells < self.lmax))[0]
+            self.lmask = np.where((self.lmin <= self.ells) & (self.ells <= self.lmax))[0]
 
         self.p0 = p0
         if self.config['emu'] == 'v2':
@@ -327,10 +333,12 @@ class MCMC:
         if self.datapoints is None:
             if self.verbose:
                 print('Using emulated data for datapoints')
+
             self.datapoints = emulator.kemu(self.theta_true, **self.emu)
         else:
             if self.verbose:
                 print('Using real data for datapoints')
+
 
         self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
@@ -348,9 +356,10 @@ class MCMC:
         self.datapoints = self.datapoints[self.lmask]
         self.err = self.err[self.lmask]
 
-        print(f"ells: {self.ells.shape}")
-        print(f"datapoints: {self.datapoints.shape}")
-        print(f"err: {self.err.shape}")
+        if self.verbose:
+            print(f"ells: {self.ells}")
+            print(f"datapoints: {self.datapoints.shape}")
+            print(f"err: {self.err.shape}")
 
         if savefig:
             ax.errorbar(self.ells, self.datapoints, color='deeppink', marker='.', ls='', yerr=self.err)
@@ -363,6 +372,10 @@ class MCMC:
             print(f"simulating data with the parameter values:")
             print(self.truths)
             print(f"using emulator version {self.config['emu']}...")
+
+            print(f"saving data to ...{self.mcmc_dir}/data")
+
+        np.savez(f"{self.mcmc_dir}/data", truths=self.truths, ells=self.ells, datapoints=self.datapoints, err=self.err)
 
 
     def init_run(self):
@@ -392,9 +405,6 @@ class MCMC:
         if self.verbose:
             print(f"Now starting MCMC run")
             print(f'-----------------------------------------')
-            print(f"saving data to ...{self.mcmc_dir}/data")
-
-        np.savez(f"{self.mcmc_dir}/data", truths=self.truths, datapoints=self.datapoints, err=self.err)
 
         if self.verbose:
             plt.plot(self.ells, self.model(self.theta_true))
@@ -443,11 +453,11 @@ class MCMC:
 
         start_time = time.time()
 
-        sampler = zeus.EnsembleSampler(self.nwalkers, self.ndim, self.lnprob_prepped,
+        self.sampler = zeus.EnsembleSampler(self.nwalkers, self.ndim, self.lnprob_prepped,
                 #      args=[datapoints, err, theta_true, lmask, which_params],
                         moves=zeus.moves.GlobalMove(self.rescale_cov), vectorize=self.vectorize)
         
-        sampler.run_mcmc(start, self.nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
+        self.sampler.run_mcmc(start, self.nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
         end_time = time.time()
 
         if self.verbose:
@@ -460,7 +470,7 @@ class MCMC:
             np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
             np.save(f'{self.mcmc_dir}/R', R_check.estimates)
 
-            fig = corner.corner(sampler.get_chain(flat=True))
+            fig = corner.corner(self.sampler.get_chain(flat=True))
             fig.savefig(f'{self.mcmc_dir}/corner.png')
 
         if self.verbose:

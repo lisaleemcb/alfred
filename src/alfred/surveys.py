@@ -10,7 +10,7 @@ telescopes ={
     'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0},
     'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5},
     'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142},
-    'CMB-HD': {'fsky':0.5, 'fwhm':0.5, 'noise':2.7},
+    'CMB-HD': {'fsky':0.6, 'fwhm':0.42, 'noise':0.7},
 }
 
 def sample_var(ls, dl, telescope, bin_width=100):
@@ -47,7 +47,7 @@ def error_cov(ells, datapoints, telescope,
         err = np.load(emuerr_file)
         ells_emu = alfred.astrofit.ells
         emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
-        emu_err = np.interp(ells, ells_emu, emu_err)
+        emu_err = np.interp(ells, ells_emu, emu_err)/np.sqrt(delta_ell)**2
 
         errors.append(emu_err)
 

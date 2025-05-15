@@ -41,7 +41,7 @@ def main():
     base_dir = f'{data_dir}/Datasets/LoReLi'
     # home_dir = '/jet/home/emcbride'
 
-    spectra_path = 'ps_ee'
+    spectra_path = 'spectra' #'ps_ee'
     ion_path = 'metadata/ion_histories_full.npz'
     Pee_path = 'spectra/Pee'
     kSZ_path = 'spectra/kSZ'
@@ -52,6 +52,8 @@ def main():
 
     ells = np.arange(0, 15000, 500)
     ells[0] = 100  
+
+    sims_v5 = np.load(f"{base_dir}/metadata/sims_v5.npy")
 
     if args.sims:
         if os.path.exists(args.sims):
@@ -101,6 +103,10 @@ def main():
     print(f'Now simulating {len(sims)} kSZ spectra!')
     for j, sn in enumerate(sims):
 
+        if sn not in sims_v5:
+            print('Skipping sim since not in v5 dataset')
+            continue
+
         start_time = time.time()
         print('==================================')
         print(f'Now on the {j+1}th run for sim {sn}')
@@ -139,44 +145,45 @@ def main():
         
 
         #data = np.load(f'{Pee_path}/simu{sn}_Pee_spectra.npz', allow_pickle=True)
-        sim = Cat(sn, skip_early=False,
-                            base_dir=base_dir,
-                            path_spectra=spectra_path,
-                            path_redshifts=redshift_file,
-                            LoReLi_format=True,
-                            verbose=False)
+        # sim = Cat(sn, skip_early=False,
+        #                     base_dir=base_dir,
+        #                     path_spectra=spectra_path,
+        #                     path_redshifts=redshift_file,
+        #                     LoReLi_format=True,
+        #                     verbose=False)
 
-        if np.isnan(utils.find_index(sim.xe)):
-            print(f'Sim {sn} is missing redshifts! Skipping...')
-            sims_empty.append(sn)
-            continue
+        # if np.isnan(utils.find_index(sim.xe)):
+        #     print(f'Sim {sn} is missing redshifts! Skipping...')
+        #     sims_empty.append(sn)
+        #     continue
 
         print('Check cleared...loading data...')
 
-        sim = Cat(sn, skip_early=True,
-                            base_dir=base_dir,
-                            path_spectra=spectra_path,
-                            path_redshifts=redshift_file,
-                            LoReLi_format=True,
-                            verbose=True)
+        sim = Cat(sn,
+                    skip_early=True,
+                    path_spectra='spectra',
+                    load_spectra=True,
+                    LoReLi_format=False,
+                    use_LoReLi_xe=True,
+                    verbose=False)
         
         print('data loaded...')
         print('')
 
-        if np.any(np.isnan(sim.Pee)):
-            print(f'Skipping sim {sn} due to nans in data!')
-            sims_nan.append(sn)
-            continue
+        # if np.any(np.isnan(sim.Pee)):
+        #     print(f'Skipping sim {sn} due to nans in data!')
+        #     sims_nan.append(sn)
+        #     continue
 
-        if sim.xe.max() < .97:
-            print(f'Sim {sn} does not reach .97 ionisation fraction!')
-            sims_failedreion.append(sn)
+        # if sim.xe.max() < .97:
+        #     print(f'Sim {sn} does not reach .97 ionisation fraction!')
+        #     sims_failedreion.append(sn)
 
-        print('smoothing Pee...')
-        k, Pee = utils.smooth_Pee(sim)
+        # print('smoothing Pee...')
+        # k, Pee = utils.smooth_Pee(sim)
 
-        print('Pee smoothed...')
-        print()
+        # print('Pee smoothed...')
+        # print()
 
         print('simulating Gorce spectrum...')
         print('----------------------------')
@@ -196,8 +203,8 @@ def main():
         #             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
         
         Dell = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
-                    Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, helium=True, helium2=True,
-                    kmin=k[0], kmax=k[-1], xemin=0.0, xemax=.97, verbose=True)
+                    Pee_data=sim.Pee, xe_data=sim.xe, z_data=sim.z, k_data=sim.k, helium=True, helium2=True,
+                    kmin=sim.k[0], kmax=sim.k[-1], xemin=0.0, xemax=.97, verbose=True)
         
         print()
         
@@ -210,8 +217,8 @@ def main():
         print(f"One kSZ run took {(end_time - start_time) / 60.0 :.3f} minutes")
         print(f'{j+1} sims completed, {len(sims)-(j + 1)} to go!')
 
-    np.save(f'sims_nan_{args.n}', sims_nan)
-    np.save(f'sims_failedreion_{args.n}', sims_failedreion)
+    # np.save(f'sims_nan_{args.n}', sims_nan)
+    # np.save(f'sims_failedreion_{args.n}', sims_failedreion)
     print('Done, YAY!')
 
 if __name__ == "__main__":

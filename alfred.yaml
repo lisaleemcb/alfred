@@ -24,6 +24,7 @@ dependencies:
       - powerbox
       - anesthetic
       - cobaya
+      - pygtc
       # - black
       - git+https://github.com/lisaleemcb/catwoman.git
       - git clone https://github.com/CMB-HD/hdlike.git

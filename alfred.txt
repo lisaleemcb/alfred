@@ -18,6 +18,7 @@ joblib
 torch
 anesthetic
 toml
+pygtc
 
 # then install with pip ('pip install -e .' while in package dir)
 # git+https://github.com/lisaleemcb/catwoman.git
