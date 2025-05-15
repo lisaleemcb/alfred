@@ -161,6 +161,7 @@ def main():
 
         sim = Cat(sn,
                     skip_early=True,
+                    base_dir=base_dir,
                     path_spectra='spectra',
                     load_spectra=True,
                     LoReLi_format=False,
@@ -179,11 +180,11 @@ def main():
         #     print(f'Sim {sn} does not reach .97 ionisation fraction!')
         #     sims_failedreion.append(sn)
 
-        # print('smoothing Pee...')
-        # k, Pee = utils.smooth_Pee(sim)
+        print('smoothing Pee...')
+        k, Pee = utils.smooth_Pee(sim)
 
-        # print('Pee smoothed...')
-        # print()
+        print('Pee smoothed...')
+        print()
 
         print('simulating Gorce spectrum...')
         print('----------------------------')
@@ -203,8 +204,8 @@ def main():
         #             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16, verbose=True, helium_interp=False)
         
         Dell = alfred.KSZ.get_KSZ(ells, interpolate_xe=True, debug=False, interpolate_Pee=True,
-                    Pee_data=sim.Pee, xe_data=sim.xe, z_data=sim.z, k_data=sim.k, helium=True, helium2=True,
-                    kmin=sim.k[0], kmax=sim.k[-1], xemin=0.0, xemax=.97, verbose=True)
+                    Pee_data=Pee, xe_data=sim.xe, z_data=sim.z, k_data=k, helium=True, helium2=True,
+                    kmin=k[0], kmax=k[-1], xemin=0.0, xemax=.97, verbose=True)
         
         print()
         
