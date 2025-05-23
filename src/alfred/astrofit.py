@@ -31,9 +31,9 @@ telescopes ={
 }
 
 delta_ell = np.mean(np.diff(ells))
-indices = list(np.concatenate([np.arange(ells.size)[2:13], np.arange(ells.size)[13::2]]))
-Planck = 0.054
-Planck_err = 0.007
+indices = list(np.concatenate([np.arange(ells.size)[3:13], np.arange(ells.size)[13::2]]))
+Planck =0.0576 #  0.054
+Planck_err = 0.0060 # 0.007
 priors2d = np.load(f'{base_dir}/inference/priors/2dpriors.npz')
 
 df = pd.read_pickle(f"{base_dir}/metadata/LoReLi_database_loggedparams.pkl")
@@ -97,7 +97,7 @@ emu_v4 = {'scalerX': scalerX_v4,
 p_from_dict = lambda pdict: np.asarray(list(pdict.values()))
 p_from_npz = lambda file: np.asarray(list(file['truths'].item().values()))
 
-ztau = np.linspace(0,20,1000)
+ztau = np.linspace(0,30,1000)
 
 def xe2tau(z, xe):
         """
