@@ -23,8 +23,8 @@ redshift_fn = 'metadata/redshift_list.dat'
 
 # data config
 survey = 'CMB-HD'
-lmin = 1000
-lmax = 15000
+lmin = 1500
+lmax = 10000
 addnoise = true
 use_data = true
 sn = '11364'

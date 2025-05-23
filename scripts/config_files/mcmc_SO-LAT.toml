@@ -1,6 +1,7 @@
-title = 'SO-LAT'
+title = 'CMB-HD_noise'
 load_datasets = true
 load_emulator = true
+
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -22,13 +23,13 @@ redshift_fn = 'metadata/redshift_list.dat'
 # data config
 survey = 'SO-LAT'
 lmin = 1500
-lmax = 15000
+lmax = 10000
 addnoise = false
 use_data = true
 sn = '11364'
 
 # emulator
-emu = 'v2'
+emu = 'v3'
 
 # mcmc
 nwalkers = 12
@@ -41,9 +42,9 @@ vectorize = true
 
 
 # parameters
-which_params_to_fit = ['tau', 'Mmin', 'fesc']
-fX = -2.72
-rHS =  0.50
-tau = 3.44
+which_params_to_fit = ['tau', 'Mmin', 'fesc'] # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
+fX = -2.71669877
+rHS =  0.40
+tau = 3.49899936
 Mmin = 8.80
-fesc = 0.27
+fesc = 0.275

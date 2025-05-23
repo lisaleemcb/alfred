@@ -9,9 +9,12 @@ import matplotlib.pyplot as plt
 import joblib
 import keras
 import tensorflow as tf
+
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Dense
-from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.layers import SpatialDropout1D, Conv1D, Input, Flatten, Dense, Dropout, BatchNormalization, LeakyReLU
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras import regularizers
+
 from keras.saving import register_keras_serializable
 
 from sklearn.model_selection import train_test_split
@@ -283,8 +286,12 @@ class NeuralNetwork(Emulator):
         self.splits = splits
         self.neurons = self.hyperparameters['neurons']
         self.epochs = self.hyperparameters['epochs']
+        self.nlayers = self.hyperparameters['nlayers']
         self.uncertainties = self.hyperparameters['uncertainties']
-
+        self.batch_normalize = self.hyperparameters['batch_normalize']
+        self.add_dropout = self.hyperparameters['add_dropout']
+        self.early_stop = self.hyperparameters['early_stop']
+        self.reduce_lr = self.hyperparameters['reduce_lr']
                 
         self.ndata = None
 
@@ -294,72 +301,65 @@ class NeuralNetwork(Emulator):
             elif self.splits is not None:
                 self.uncertainties = np.zeros_like(splits[2][0])
 
-    def regress(self, kSZ=True, xe=False):
+    def regress(self, kSZ=True):
         if self.verbose:
             print(f"Now running regression with hyperparameters:")
             print(f"\t {self.hyperparameters}")
         
-        if xe:
-            def custom_loss(y_true, y_pred):
-                loss = tf.reduce_mean(tf.losses.binary_crossentropy(y_true, y_pred))
-                return loss + 0.01 * tf.reduce_sum(y_pred)  # Adding a small regularization term as an example
+    
+        # Train the model with validation data
+        early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
 
+        loss_function = WeightedMSELoss(ndata=self.ndata)
 
-            layer_norm = tf.keras.layers.Normalization()
-            layer_norm.adapt(self.X_train)
+        callbacks = []
+        if self.early_stop:
+            callbacks.append(early_stop)
+        if self.reduce_lr:
+            callbacks.append(reduce_lr)
+        
+        self.model = Sequential()
+        self.model.add(Conv1D(filters=64,
+                 kernel_size=4,
+                 activation=None,
+                 kernel_regularizer=regularizers.l2(1e-4)))
+       # self.model.add(Dense(units=self.neurons, kernel_regularizer=regularizers.l2(0.001)))
+        self.model.add(LeakyReLU(negative_slope=0.01))
+   
+        for i in range(self.nlayers): # hidden layers
+            self.model.add(Conv1D(filters=128, kernel_size=4, kernel_regularizer=regularizers.l2(1e-5)))
+            #self.model.add(Dense(units=self.neurons, kernel_regularizer=regularizers.l2(0.001))) 
+            if self.batch_normalize:
+                self.model.add(BatchNormalization())
 
-            nx = self.y_train.shape[1]
-            # Define the model
-            self.model = Sequential([
-                layer_norm,
-                Dense(nx, activation='relu', input_shape=(self.X_train.shape[1],)),
-                Dense(nx, activation='relu'),
-                Dense(nx, activation='relu'),
-                #layers.Dense(nx, activation='relu'),
-                Dense(nx, activation='relu'),
-                Dense(nx, activation='linear')#'softmax' 'sigmoid'
-            ])
+            self.model.add(LeakyReLU(alpha=0.01))
 
+            if self.add_dropout:
+                self.model.add(SpatialDropout1D(0.2))
+        
+        self.model.add(Flatten())
+        self.model.add(Dense(units=self.ndata, activation='linear'))      # Output layer (for regression, no activation function)
+     #   self.model.compile(optimizer='adam', loss=loss_function) # Compile the model
+        self.model.compile(optimizer='adam',  loss='mse') # Compile the model
+       
+        verbose = 0
+        if self.verbose:
+            verbose = 1
+        # Train the model
 
-            self.model.compile(optimizer='adam',loss='mse', metrics=['accuracy'])
-            self.model.compile(optimizer='adam',loss='mse', metrics=[tf.keras.metrics.MeanSquaredError()])
-            self.history = self.model.fit(self.X_train, self.y_train,
-                                        epochs=600, batch_size=35,
-                                        validation_data=(self.X_test, self.y_test))
-
-        elif kSZ:
-            # Train the model with validation data
-            lr_scheduler = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5)
-            
-            self.model = Sequential() #[Input(shape=input_shape), Dense(units=64, activation='relu')])
-        # self.model.add(Dense(units=5, activation='relu')) # Input layer and first hidden layer (Dense layer)
-            self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-            self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Input layer and first hidden layer (Dense layer)
-            self.model.add(Dense(units=self.neurons, activation='leaky_relu')) # Second hidden layer
-            self.model.add(Dense(units=self.ndata, activation='linear'))      # Output layer (for regression, no activation function)
-                                    
-
-            loss_function = WeightedMSELoss(ndata=self.ndata)
-        #     # Compile the model
-            self.model.compile(optimizer='adam', loss=loss_function)
-            
-            verbose = 0
-            if self.verbose:
-                verbose = 1
-            # Train the model
-
-            # print(self.X_train.shape)
-            # print(self.y_train.shape)
-            # print(self.X_test.shape)
-            # print(self.y_test.shape)
-            self.history = self.model.fit(self.X_train,
-                                            self.y_train,
-                                            epochs=self.epochs,
-                                            batch_size=32,
-                                            callbacks=[lr_scheduler],
-                                            validation_data=(self.X_test, self.y_test),
-                                            verbose=verbose)
-            
+        # print(self.X_train.shape)
+        # print(self.y_train.shape)
+        # print(self.X_test.shape)
+        # print(self.y_test.shape)
+        self.history = self.model.fit(self.X_train,
+                                        self.y_train,
+                                        epochs=self.epochs,
+                                        batch_size=32,
+                                        callbacks=callbacks,
+                                        validation_data=(self.X_test, self.y_test),
+                                        verbose=verbose)
+        
         return
     
     # @register_keras_serializable()
@@ -411,8 +411,7 @@ class NeuralNetwork(Emulator):
                                                 X_test=self.descale(self.X_test, X_or_y='X'),
                                                 y_train=self.descale(self.y_train[:,:self.ndata]), 
                                                 y_test=self.descale(self.y_test[:,:self.ndata]),
-                                                hyperparameters=self.hyperparameters,
-                                                uncertainties=self.uncertainties)
+                                                hyperparameters=self.hyperparameters)
 
         if self.verbose:
             print(f"Emulator files saved in {dir}")

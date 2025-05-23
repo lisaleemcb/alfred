@@ -37,6 +37,10 @@ Planck_err = 0.007
 priors2d = np.load(f'{base_dir}/inference/priors/2dpriors.npz')
 
 df = pd.read_pickle(f"{base_dir}/metadata/LoReLi_database_loggedparams.pkl")
+df = df.loc[df.index.intersection(get_sims(dir='spectra/kSZ/LoReLi/nells30_v4'))]
+failed = np.load(f'{base_dir}/metadata/sims_failed.npy', allow_pickle=True)
+df = df.drop(failed, errors='ignore')
+
 xe_histories = np.load(f'{base_dir}/metadata/ion_histories_full.npz', allow_pickle=True)
 xe_histories = xe_histories['arr_0'].item()
 
@@ -119,21 +123,25 @@ def xe2tau(z, xe):
 
 def lnprior(theta, truths, priors,
             priors2d=priors2d, add2d=True,
-            Planck=Planck, Planck_err=Planck_err, addPlanck=False,
+            Planck=Planck, Planck_err=Planck_err, addPlanck=True,
             verbose=False):
+        
+    if theta.ndim == 1:
+        theta = theta[None,:]
 
     pass1d = np.all((priors[:,0] <= theta) & (priors[:,1] >= theta), axis=1)
     pass2d = np.ones_like(pass1d, dtype=bool)
-    passPlanck = np.ones_like(pass1d, dtype=bool)
+    passPlanck = np.zeros_like(pass1d)
 
     if add2d:
         Mmin = theta[:,3] # CAREFUL! currently hardcoded (also log10)
-        tau = theta[:,2]  # CAREFUL! currently hardcoded (also log10)
+        tau_SR = theta[:,2]  # CAREFUL! currently hardcoded (also log10)
 
         below = priors2d['m'] * Mmin + priors2d['b_below']
         above = priors2d['m'] * Mmin + priors2d['b_above']
 
-        pass2d =  (below <= tau) & (tau <= above)
+        pass2d =  (below <= tau_SR) & (tau_SR <= above)
+
     
     if addPlanck:
         if verbose:
@@ -141,16 +149,40 @@ def lnprior(theta, truths, priors,
         xemu = keras_xe_emul.xe_emul_array(ztau, theta, plot=False)
         tau = xe2tau(ztau, xemu)[:,-1]
 
-        print(tau.shape)
+        passPlanck = -.5 * (Planck - tau)**2.0 / Planck_err**2.0
 
-        passPlanck =  (Planck * np.ones_like(tau) - tau)**2.0 / (Planck_err* np.ones_like(tau))**2.0
-        print(passPlanck)
 
     passes = pass1d & pass2d
     passes = np.where(passes, 0, -np.inf)
     passes += passPlanck
 
-    return np.where(passes, 0, -np.inf)
+    return passes
+
+def draws(ndraws, priors=priors, truths=dict(zip(df.columns, df.mean().to_numpy())), add2d=True, addPlanck=False):
+    # Extract low and high, reshape to (5, 1) so broadcasting works
+    low = priors[:, 0][:, np.newaxis]   # shape (5, 1)
+    high = priors[:, 1][:, np.newaxis]  # shape (5, 1)
+
+    # Generate uniform random numbers of shape (5, 100)
+    draws = np.random.uniform(low=low, high=high, size=(5, ndraws)).T
+
+    if add2d:
+        passes = lnprior(draws, truths, priors, add2d=True, addPlanck=False)
+
+        while np.any(np.isneginf(passes)):
+            idx2replace = np.where(np.isneginf(passes))[0]
+            moredraws = np.random.uniform(low=low, high=high, size=(5, len(idx2replace) * 2)).T
+            morepasses = lnprior(moredraws, truths, priors, add2d=True, addPlanck=False)
+            idx2keep = np.where(np.isfinite(morepasses))[0]
+
+            for i, idx in enumerate(idx2keep):
+                if i < len(idx2replace):
+                  #  print(f"Replacing index {idx2replace[i]} with index {idx}")
+                    draws[idx2replace[i]] = moredraws[idx]
+
+            passes = lnprior(draws, truths, priors, add2d=True, addPlanck=False)
+
+    return draws
 
 def fill(guess, truths, which_params):
     if guess.ndim == 1:
@@ -258,7 +290,7 @@ class MCMC:
         
         self.config = config
         self.verbose = verbose
-        self.title = self.config['title']
+        self.title = self.config.title
         if dir is None:
             self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{self.title}"
         elif dir is not None:
@@ -266,54 +298,54 @@ class MCMC:
 
         os.makedirs(self.mcmc_dir)
 
-        self.telescope = self.config['survey']
+        self.telescope = self.config.survey
         self.ells = ells
         self.datapoints = datapoints
 
         if lmask is not None:
             self.lmask = lmask
         else:
-            self.lmin = self.config['lmin']
-            self.lmax = self.config['lmax']
+            self.lmin = self.config.lmin
+            self.lmax = self.config.lmax
             self.lmask = np.where((self.lmin <= self.ells) & (self.ells <= self.lmax))[0]
 
         self.p0 = p0
-        if self.config['emu'] == 'v2':
-            print(f"using emu: {self.config['emu']}")
+        if self.config.emu == 'v2':
+            print(f"using emu: {self.config.emu}")
             self.emu = emu_v2
-        elif self.config['emu'] == 'v3':
-            print(f"using emu: {self.config['emu']}")
+        elif self.config.emu == 'v3':
+            print(f"using emu: {self.config.emu}")
             self.emu = emu_v3
-        elif self.config['emu'] == 'v3.1':
-            print(f"using emu: {self.config['emu']}")
+        elif self.config.emu == 'v3.1':
+            print(f"using emu: {self.config.emu}")
             self.emu = emu_v3p1
-        elif self.config['emu'] == 'v4':
-            print(f"using emu: {self.config['emu']}")
+        elif self.config.emu == 'v4':
+            print(f"using emu: {self.config.emu}")
             self.emu = emu_v4
-        elif self.config['emu'] == 'input_emu':
-            print(f"using emu: {self.config['emu']}")
+        elif self.config.emu == 'input_emu':
+            print(f"using emu: {self.config.emu}")
             self.emu = emu
-        self.addnoise = self.config['addnoise']
+        self.addnoise = self.config.addnoise
 
-        self.which_params = self.config['which_params_to_fit']
+        self.which_params = self.config.which_params_to_fit
         self.priors = priors
-        self.add2d = self.config['add2d']
+        self.add2d = self.config.add2d
         if self.add2d:
             self.priors2d = priors2d
-        self.addPlanck = self.config['addPlanck']
+        self.addPlanck = self.config.addPlanck
         if self.addPlanck:
             self.Planck = Planck
             self.Planck_err = Planck_err
         else:
             self.Planck = None
             self.Planck_err = None
-        self.vectorize = self.config['vectorize']
+        self.vectorize = self.config.vectorize
 
-        self.nwalkers = self.config['nwalkers']
-        self.burnin = self.config['burnin']
-        self.nsteps = self.config['nsteps']
+        self.nwalkers = self.config.nwalkers
+        self.burnin = self.config.burnin
+        self.nsteps = self.config.nsteps
         self.ndim = len(self.which_params)
-        self.rescale_cov = self.config['rescale_cov']
+        self.rescale_cov = self.config.rescale_cov
 
     def init_data(self, savefig=True):
         if self.verbose:
@@ -325,8 +357,12 @@ class MCMC:
             fig, ax = plt.subplots()
 
         self.truths = {}
-        for pname in df.columns:
-            self.truths[pname] = self.config[pname]
+        if not self.config.use_data:
+            for pname in df.columns:
+                self.truths[pname] = getattr(self.config, pname)
+
+        elif self.config.use_data:
+            self.truths = df.loc[self.config.sn].to_dict()
 
         self.theta_true = np.asarray(list(self.truths.values()))
 
@@ -338,7 +374,6 @@ class MCMC:
         else:
             if self.verbose:
                 print('Using real data for datapoints')
-
 
         self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
@@ -371,11 +406,11 @@ class MCMC:
         if self.verbose:
             print(f"simulating data with the parameter values:")
             print(self.truths)
-            print(f"using emulator version {self.config['emu']}...")
+            print(f"using emulator version {self.config.emu}...")
 
             print(f"saving data to ...{self.mcmc_dir}/data")
 
-        np.savez(f"{self.mcmc_dir}/data", truths=self.truths, ells=self.ells, datapoints=self.datapoints, err=self.err)
+        np.savez(f"{self.mcmc_dir}/data", p0=self.p0, lmask=self.lmask, truths=self.truths, ells=self.ells, datapoints=self.datapoints, err=self.err)
 
 
     def init_run(self):
