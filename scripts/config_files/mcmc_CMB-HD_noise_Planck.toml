@@ -27,7 +27,7 @@ lmin = 1500
 lmax = 10000
 addnoise = true
 use_data = true
-sn = '11364'
+sn = '12958'
 
 # emulator
 emu = 'v3'

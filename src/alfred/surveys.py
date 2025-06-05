@@ -31,6 +31,13 @@ def noise(ls, telescope, pol=False, is_cl=False):
         nl *= ls*(ls+1.)/2./np.pi
     return nl
 
+def emu_error(ells, file=f'{base_dir}/emulators/LoReLi_settings/NN_LoReLi_errors.npy'):
+    err = np.load(file)
+    ells_emu = alfred.astrofit.ells
+    emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
+    emu_err = 10.0 * np.interp(ells, ells_emu, emu_err)
+
+
 def error_cov(ells, datapoints, telescope,
             include_samplevar=True, include_noise=True, include_emulator=True,
             emuerr_file=f'{base_dir}/emulators/LoReLi_settings/NN_LoReLi_errors.npy'):
@@ -47,7 +54,7 @@ def error_cov(ells, datapoints, telescope,
         err = np.load(emuerr_file)
         ells_emu = alfred.astrofit.ells
         emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
-        emu_err = np.interp(ells, ells_emu, emu_err)/np.sqrt(delta_ell)**2
+        emu_err = 10 * np.interp(ells, ells_emu, emu_err) #/ np.sqrt(delta_ell)**2
 
         errors.append(emu_err)
 

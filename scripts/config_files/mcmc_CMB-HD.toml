@@ -26,15 +26,15 @@ lmin = 1500
 lmax = 10000
 addnoise = false
 use_data = true
-sn = '11364'
+sn = '12958'
 
 # emulator
-emu = 'v3'
+emu = 'input_emu'
 
 # mcmc
 nwalkers = 12
 burnin = 1000
-nsteps = 5000
+nsteps = 10000
 rescale_cov = 0.1
 add2d = true
 addPlanck = false

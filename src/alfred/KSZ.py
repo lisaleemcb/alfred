@@ -769,6 +769,7 @@ class KSZ_power:
         self.tau_z_integ = tauf(self.z_integ)  # thomson optical depth
 
         if self.verbose:
+            print(f'printing tau with interpolate_xe={self.interpolate_xe}')
             print("tau = %.4f" % self.tau)
 
     def def_camb(self):

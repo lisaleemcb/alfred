@@ -11,7 +11,7 @@ import keras
 import tensorflow as tf
 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SpatialDropout1D, Conv1D, Input, Flatten, Dense, Dropout, BatchNormalization, LeakyReLU
+from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization, ELU, LeakyReLU
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras import regularizers
 
@@ -44,6 +44,17 @@ def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
         Y = Y.flatten()
 
     return Y
+
+def mechkemu(params, emus, log_data=True):
+    spectra = []
+
+    for emu in emus:
+        s = kemu(params, **emu, log_data=log_data)
+        spectra.append(s)
+
+    spectra = np.asarray(spectra)
+
+    return spectra.mean(axis=0)
 
 @register_keras_serializable(package="Custom")
 class WeightedMSELoss(keras.losses.Loss):
@@ -132,8 +143,8 @@ class Emulator:
         if self.splits is None:
             X_train, X_test, y_train, y_test = train_test_split(self.features,
                                                                 self.dataset,
-                                                                test_size=0.2,
-                                                              random_state=42)
+                                                                test_size=0.2)
+                                                           #   random_state=42)
         elif self.splits is not None:
             X_train, X_test, y_train, y_test = self.splits
 
@@ -320,29 +331,23 @@ class NeuralNetwork(Emulator):
             callbacks.append(reduce_lr)
         
         self.model = Sequential()
-        self.model.add(Conv1D(filters=64,
-                 kernel_size=4,
-                 activation=None,
-                 kernel_regularizer=regularizers.l2(1e-4)))
-       # self.model.add(Dense(units=self.neurons, kernel_regularizer=regularizers.l2(0.001)))
+        self.model.add(Dense(units=self.neurons, kernel_regularizer=regularizers.l2(0.001)))
         self.model.add(LeakyReLU(negative_slope=0.01))
    
-        for i in range(self.nlayers): # hidden layers
-            self.model.add(Conv1D(filters=128, kernel_size=4, kernel_regularizer=regularizers.l2(1e-5)))
-            #self.model.add(Dense(units=self.neurons, kernel_regularizer=regularizers.l2(0.001))) 
+
+        for i in range(self.nlayers): # hidden layer
+            reg_strength = min(1e-4 * 10**i, 1e-3)
+            self.model.add(Dense(units=self.neurons, kernel_regularizer=regularizers.l2(reg_strength))) 
             if self.batch_normalize:
                 self.model.add(BatchNormalization())
-
-            self.model.add(LeakyReLU(alpha=0.01))
-
+            self.model.add(LeakyReLU(negative_slope=0.01))
             if self.add_dropout:
-                self.model.add(SpatialDropout1D(0.2))
+                self.model.add(Dropout(0.2))
         
-        self.model.add(Flatten())
-        self.model.add(Dense(units=self.ndata, activation='linear'))      # Output layer (for regression, no activation function)
-     #   self.model.compile(optimizer='adam', loss=loss_function) # Compile the model
-        self.model.compile(optimizer='adam',  loss='mse') # Compile the model
-       
+        self.model.add(Dense(units=self.ndata, activation='linear'))
+       # optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3)      # Output layer (for regression, no activation function)
+        self.model.compile(optimizer='adam', loss=loss_function) # Compile the model
+        
         verbose = 0
         if self.verbose:
             verbose = 1
@@ -355,7 +360,7 @@ class NeuralNetwork(Emulator):
         self.history = self.model.fit(self.X_train,
                                         self.y_train,
                                         epochs=self.epochs,
-                                        batch_size=32,
+                                        batch_size=64,
                                         callbacks=callbacks,
                                         validation_data=(self.X_test, self.y_test),
                                         verbose=verbose)
@@ -411,7 +416,8 @@ class NeuralNetwork(Emulator):
                                                 X_test=self.descale(self.X_test, X_or_y='X'),
                                                 y_train=self.descale(self.y_train[:,:self.ndata]), 
                                                 y_test=self.descale(self.y_test[:,:self.ndata]),
-                                                hyperparameters=self.hyperparameters)
+                                                hyperparameters=self.hyperparameters,
+                                                uncertainties=self.uncertainties)
 
         if self.verbose:
             print(f"Emulator files saved in {dir}")

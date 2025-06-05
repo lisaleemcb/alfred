@@ -20,7 +20,7 @@ import alfred.emulator as emulator
 import alfred.surveys as surveys
 import alfred.keras_xe_emul as keras_xe_emul
 from alfred.parameters import *
-from alfred.utils import get_sims
+from alfred.utils import get_sims, summon_emu
 
 
 telescopes ={
@@ -37,9 +37,9 @@ Planck_err = 0.0060 # 0.007
 priors2d = np.load(f'{base_dir}/inference/priors/2dpriors.npz')
 
 df = pd.read_pickle(f"{base_dir}/metadata/LoReLi_database_loggedparams.pkl")
-df = df.loc[df.index.intersection(get_sims(dir='spectra/kSZ/LoReLi/nells30_v4'))]
-failed = np.load(f'{base_dir}/metadata/sims_failed.npy', allow_pickle=True)
-df = df.drop(failed, errors='ignore')
+df = df.loc[df.index.intersection(get_sims(dir='spectra/kSZ/LoReLi/nells30_v5'))]
+# failed = np.load(f'{base_dir}/metadata/sims_failed.npy', allow_pickle=True)
+# df = df.drop(failed, errors='ignore')
 
 xe_histories = np.load(f'{base_dir}/metadata/ion_histories_full.npz', allow_pickle=True)
 xe_histories = xe_histories['arr_0'].item()
@@ -52,47 +52,7 @@ features = cp.deepcopy(df.to_numpy())
 pass_prior = np.load(f'{base_dir}/inference/priors/pass_prior.npy')
 pass_Planck = np.load(f'{base_dir}/inference/priors/pass_Planckprior.npy')
 
-scalerX_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerX_LoReLi_style.pkl")
-scalerY_v2 = joblib.load(f"{base_dir}/emulators/LoReLi_settings/scalerY_LoReLi_style.pkl")
-model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/LoReLi_settings/NN_LoReLi_style_model.keras")
-emu_v2 = {'scalerX': scalerX_v2,
-     'scalerY': scalerY_v2,
-     'model': model_v2}
-
-# scalerX_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerX_v2.pkl")
-# scalerY_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerY_v2.pkl")
-# model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/v2/NNv2_model.keras")
-# emu_v2 = {'scalerX': scalerX_v2,
-#    'scalerY': scalerY_v2,
-#    'model': model_v2}
-
-# scalerX_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerX_v2.pkl")
-# scalerY_v2 = joblib.load(f"{base_dir}/emulators/v2/scalerY_v2.pkl")
-# model_v2 = tf.keras.models.load_model(f"{base_dir}/emulators/v2/NNv2_model.keras")
-# emu_v2 = {'scalerX': scalerX_v2,
-#     'scalerY': scalerY_v2,
-#     'model': model_v2}
-
-scalerX_v3 = joblib.load(f"{base_dir}/emulators/nn_v3/scalerX.pkl")
-scalerY_v3 = joblib.load(f"{base_dir}/emulators/nn_v3/scalerY.pkl")
-model_v3 = tf.keras.models.load_model(f"{base_dir}/emulators/nn_v3/model.keras", safe_mode=False)
-emu_v3 = {'scalerX': scalerX_v3,
-    'scalerY': scalerY_v3,
-    'model': model_v3}
-
-scalerX_v3p1 = joblib.load(f"{base_dir}/emulators/nn_v3.1/scalerX.pkl")
-scalerY_v3p1 = joblib.load(f"{base_dir}/emulators/nn_v3.1/scalerY.pkl")
-model_v3p1 = tf.keras.models.load_model(f"{base_dir}/emulators/nn_v3.1/model.keras", safe_mode=False)
-emu_v3p1 = {'scalerX': scalerX_v3p1,
-    'scalerY': scalerY_v3p1,
-    'model': model_v3p1}
-
-scalerX_v4 = joblib.load(f"{base_dir}/emulators/nn_v4_CVadded/scalerX.pkl")
-scalerY_v4 = joblib.load(f"{base_dir}/emulators/nn_v4_CVadded/scalerY.pkl")
-model_v4 = tf.keras.models.load_model(f"{base_dir}/emulators/nn_v4_CVadded/model.keras", safe_mode=False)
-emu_v4 = {'scalerX': scalerX_v4,
-    'scalerY': scalerY_v4,
-    'model': model_v4}
+emu = summon_emu('v5.0')
 
 p_from_dict = lambda pdict: np.asarray(list(pdict.values()))
 p_from_npz = lambda file: np.asarray(list(file['truths'].item().values()))
@@ -120,22 +80,35 @@ def xe2tau(z, xe):
 
         return tofz
 
+def whatthetau(params):
+    xemu_Planck = keras_xe_emul.xe_emul_array(ztau, params, plot=False)
+    tau = xe2tau(ztau, xemu_Planck)[:,-1]
+
+    return tau
+
 
 def lnprior(theta, truths, priors,
-            priors2d=priors2d, add2d=True,
+            priors2d=priors2d, add2d=True, only3=False,
             Planck=Planck, Planck_err=Planck_err, addPlanck=True,
-            verbose=False):
+            verbose=False, debug=False):
         
     if theta.ndim == 1:
         theta = theta[None,:]
 
-    pass1d = np.all((priors[:,0] <= theta) & (priors[:,1] >= theta), axis=1)
+    index = 0
+    if only3:
+        index = 2
+
+    pass1d = np.all((priors[index:,0] <= theta) & (priors[index:,1] >= theta), axis=1)
     pass2d = np.ones_like(pass1d, dtype=bool)
     passPlanck = np.zeros_like(pass1d)
 
     if add2d:
-        Mmin = theta[:,3] # CAREFUL! currently hardcoded (also log10)
-        tau_SR = theta[:,2]  # CAREFUL! currently hardcoded (also log10)
+       # Mmin = theta[:,3] # CAREFUL! currently hardcoded (also log10)
+       # tau_SR = theta[:,2]  # CAREFUL! currently hardcoded (also log10)
+
+        Mmin = theta[:,3-index] # CAREFUL! currently hardcoded (also log10)
+        tau_SR = theta[:,2-index]  # CAREFUL! currently hardcoded (also log10)
 
         below = priors2d['m'] * Mmin + priors2d['b_below']
         above = priors2d['m'] * Mmin + priors2d['b_above']
@@ -151,6 +124,9 @@ def lnprior(theta, truths, priors,
 
         passPlanck = -.5 * (Planck - tau)**2.0 / Planck_err**2.0
 
+        if debug:
+            print(f"tau={tau}")
+            print(f"pass_Planck={passPlanck}")
 
     passes = pass1d & pass2d
     passes = np.where(passes, 0, -np.inf)
@@ -158,8 +134,11 @@ def lnprior(theta, truths, priors,
 
     return passes
 
-def draws(ndraws, priors=priors, truths=dict(zip(df.columns, df.mean().to_numpy())), add2d=True, addPlanck=False):
+def draws(ndraws, priors=priors, truths=dict(zip(df.columns, df.mean().to_numpy())),
+           add2d=True, addPlanck=False, verbose=False):
     # Extract low and high, reshape to (5, 1) so broadcasting works
+    if verbose:
+        print(f"drawing {ndraws} samples")
     low = priors[:, 0][:, np.newaxis]   # shape (5, 1)
     high = priors[:, 1][:, np.newaxis]  # shape (5, 1)
 
@@ -167,6 +146,8 @@ def draws(ndraws, priors=priors, truths=dict(zip(df.columns, df.mean().to_numpy(
     draws = np.random.uniform(low=low, high=high, size=(5, ndraws)).T
 
     if add2d:
+        if verbose:
+            print(f"running samples through 2d prior")
         passes = lnprior(draws, truths, priors, add2d=True, addPlanck=False)
 
         while np.any(np.isneginf(passes)):
@@ -205,16 +186,21 @@ def fill(guess, truths, which_params):
 
     return theta
 
-def lnprob(guess, model, data, err, truths, priors,
+def lnprob(guess, model, data, err, truths, priors, Aprior=None,
             which_params='all', vectorize=False,
             priors2d=priors2d, add2d=True,
-            Planck=Planck, Planck_err=Planck_err, addPlanck=False):
+            Planck=Planck, Planck_err=Planck_err, addPlanck=False,
+            debug=False):
 
     theta = fill(guess, truths, which_params)
+    # theta = guess
     
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
-                Planck=Planck, Planck_err=Planck_err, addPlanck=addPlanck)
+                Planck=Planck, Planck_err=Planck_err,
+                addPlanck=addPlanck, debug=debug)
+    if np.any(Aprior is not None):
+        lp += Aprior
 
     # if not np.isfinite(lp):
     #     return -np.inf#, 0.
@@ -223,6 +209,8 @@ def lnprob(guess, model, data, err, truths, priors,
     if not vectorize:
         return (lp + ln)[0]
 
+    if np.any(np.isnan(lp + ln)):
+        print(f"Guess values {theta} are causing a NaN!")
     return lp + ln #, model
 
 def lnlike(theta, model, data, err):
@@ -279,6 +267,8 @@ class MCMC:
                     lmask=None,
                     datapoints=None,
                     p0=None,
+                    A=None,
+                    Astats=[0.0, .1],
                     emu=None,
                     priors=priors,
                     priors2d=priors2d,
@@ -286,17 +276,28 @@ class MCMC:
                     Planck_err=Planck_err,
                     base_dir=base_dir,
                     dir=None,
+                    showfigs=False,
+                    dryrun=False,
                     verbose=False):
         
         self.config = config
         self.verbose = verbose
+        if self.verbose:
+            print(f"initialising instance of MCMC class...")
         self.title = self.config.title
         if dir is None:
             self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{self.title}"
         elif dir is not None:
             self.mcmc_dir = f"{dir}/{self.title}"
+        if self.verbose:
+            print(f"placing mcmc results in directory {self.mcmc_dir}")
 
-        os.makedirs(self.mcmc_dir)
+        self.showfigs = showfigs
+        self.dryrun = dryrun
+        if self.verbose:
+            print(f"doing a dry run...")
+        if not self.dryrun:
+            os.makedirs(self.mcmc_dir)
 
         self.telescope = self.config.survey
         self.ells = ells
@@ -310,21 +311,30 @@ class MCMC:
             self.lmask = np.where((self.lmin <= self.ells) & (self.ells <= self.lmax))[0]
 
         self.p0 = p0
-        if self.config.emu == 'v2':
-            print(f"using emu: {self.config.emu}")
-            self.emu = emu_v2
-        elif self.config.emu == 'v3':
-            print(f"using emu: {self.config.emu}")
-            self.emu = emu_v3
-        elif self.config.emu == 'v3.1':
-            print(f"using emu: {self.config.emu}")
-            self.emu = emu_v3p1
-        elif self.config.emu == 'v4':
-            print(f"using emu: {self.config.emu}")
-            self.emu = emu_v4
-        elif self.config.emu == 'input_emu':
-            print(f"using emu: {self.config.emu}")
+        self.A = A
+        if self.A is not None:
+            self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
+            if self.verbose:
+                print(f"Running with nuisance parameter, A...")
+        self.Amean, self.Asigma = Astats
+
+        if emu is not None:
             self.emu = emu
+        # elif self.config.emu == 'v2':
+        #     print(f"using emu: {self.config.emu}")
+        #     self.emu = emu_v2
+        # elif self.config.emu == 'v3':
+        #     print(f"using emu: {self.config.emu}")
+        #     self.emu = emu_v3
+        # elif self.config.emu == 'v3.1':
+        #     print(f"using emu: {self.config.emu}")
+        #     self.emu = emu_v3p1
+        # elif self.config.emu == 'v4':
+        #     print(f"using emu: {self.config.emu}")
+        #     self.emu = emu_v4
+        # elif self.config.emu == 'input_emu':
+        #     print(f"using emu: {self.config.emu}")
+
         self.addnoise = self.config.addnoise
 
         self.which_params = self.config.which_params_to_fit
@@ -332,6 +342,8 @@ class MCMC:
         self.add2d = self.config.add2d
         if self.add2d:
             self.priors2d = priors2d
+        elif not self.add2d:
+            self.priors2d = None
         self.addPlanck = self.config.addPlanck
         if self.addPlanck:
             self.Planck = Planck
@@ -344,20 +356,18 @@ class MCMC:
         self.nwalkers = self.config.nwalkers
         self.burnin = self.config.burnin
         self.nsteps = self.config.nsteps
-        self.ndim = len(self.which_params)
+        self.ndim = len(self.which_params) + int(np.any(self.A is not None))
         self.rescale_cov = self.config.rescale_cov
 
-    def init_data(self, savefig=True):
+        print(f"initialisation complete!")
+
+    def init_data(self):
         if self.verbose:
             print(f'-----------------------------------------')
             print(f"Now initialising data for mcmc run")
             print(f'-----------------------------------------')
-
-        if savefig:
-            fig, ax = plt.subplots()
-
-        self.truths = {}
         if not self.config.use_data:
+            self.truths = {}
             for pname in df.columns:
                 self.truths[pname] = getattr(self.config, pname)
 
@@ -373,13 +383,10 @@ class MCMC:
             self.datapoints = emulator.kemu(self.theta_true, **self.emu)
         else:
             if self.verbose:
-                print('Using real data for datapoints')
+                print('Using input data for datapoints')
 
         self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
         self.err =np.sqrt(np.diag(self.err_cov))
-
-        if savefig:
-            ax.plot(self.ells, self.datapoints, color='green', alpha=.3)
 
         if self.addnoise:
             if self.verbose:
@@ -392,28 +399,17 @@ class MCMC:
         self.err = self.err[self.lmask]
 
         if self.verbose:
-            print(f"ells: {self.ells}")
-            print(f"datapoints: {self.datapoints.shape}")
-            print(f"err: {self.err.shape}")
-
-        if savefig:
-            ax.errorbar(self.ells, self.datapoints, color='deeppink', marker='.', ls='', yerr=self.err)
-            ax.set_xlabel('ell')
-            ax.set_ylabel('Dell')
-
-            fig.savefig(f"{self.mcmc_dir}/{self.title}_data")
-
-        if self.verbose:
             print(f"simulating data with the parameter values:")
             print(self.truths)
             print(f"using emulator version {self.config.emu}...")
 
-            print(f"saving data to ...{self.mcmc_dir}/data")
+        if not self.dryrun:
+            if self.verbose:
+                print(f"saving data to ...{self.mcmc_dir}/data")
+            np.savez(f"{self.mcmc_dir}/data", p0=self.p0, lmask=self.lmask, truths=self.truths, ells=self.ells, datapoints=self.datapoints, err=self.err)
 
-        np.savez(f"{self.mcmc_dir}/data", p0=self.p0, lmask=self.lmask, truths=self.truths, ells=self.ells, datapoints=self.datapoints, err=self.err)
 
-
-    def init_run(self):
+    def init_run(self, list_emus=None, savefig=True):
         if self.verbose:
             print(f"Now running initialisation of MCMC run")
             print(f'-----------------------------------------')
@@ -421,29 +417,79 @@ class MCMC:
             print()
             print(f"Running the mcmc for {self.title} on the params:")
             print(f"\t{self.which_params}...")
+            print(f"True values are {self.truths} for simulation {self.config.sn}")
+        
+        if list_emus:
+            print(f"passed list of emulators...")
+            def model(p, lmask=self.lmask, emu=self.emu):
+                if p.ndim == 1:
+                    return emulator.mechkemu(p, list_emus)[lmask]
+                elif p.ndim == 2:
+                    return emulator.mechkemu(p, list_emus)[:, lmask]
 
-        def model(p, lmask=self.lmask, emu=self.emu):
-            if p.ndim == 1:
-                return emulator.kemu(p, **emu)[lmask]
-            elif p.ndim == 2:
-                return emulator.kemu(p, **emu)[:, lmask]
+        elif not list_emus:
+            print(f"single emulator mode...")
+            def model(p, A=None, lmask=self.lmask, emu=self.emu):
+                if A is None:
+                    A = np.array([1])
+                #     mp = p
+                # elif self.A is not None:
+                #     A = p[-1]
+                #     mp = p[:-1] 
 
+         #       print(f"Inside model A={A}")
+                if p.ndim == 1:
+                    return A * emulator.kemu(p, **emu)[lmask]
+                elif p.ndim == 2:
+                    return A[:,None] * emulator.kemu(p, **emu)[:, lmask]
 
         self.model = model
-        self.lnprob_prepped = lambda params: lnprob(params, self.model, self.datapoints,
-                                            self.err, self.truths, self.priors,
-                                            which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
-                                            Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
-                                            vectorize=self.vectorize)
+        def lnprob_prepped(params):
+            if np.any(self.A is not None):
+                model_params = params[:,:-1]
+                self.A = params[:,-1] 
+
+                passA =  np.all((self.A > .9) & (self.A < 1.1))
+                passA = np.where(passA, 0, -np.inf)
+                # print(f"model_params: {model_params}")
+                # print(f"resetting A to  A={self.A}")
+                # print(f"in keeping with the lp of A: {passA}")
+                # print('')
+            elif np.any(self.A is None):
+                model_params = params
+                passA = None
+
+            return lnprob(model_params, lambda p: self.model(p, A=self.A), self.datapoints,
+                        self.err, self.truths, self.priors, Aprior=passA,
+                        which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
+                        Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
+                        vectorize=self.vectorize)
+            
+        self.lnprob_prepped = lnprob_prepped
+
+        fig, ax = plt.subplots()
+        if self.verbose:
+            print(f"ells: {self.ells}")
+            print(f"datapoints: {self.datapoints.shape}")
+            print(f"err: {self.err.shape}")
+
+            if self.showfigs:
+                ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data')
+                ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
+                ax.errorbar(self.ells, self.datapoints, color='green', marker='.', ls='', yerr=self.err, label='observations')
+                ax.set_xlabel('ell')
+                ax.set_ylabel('Dell')
+
+                fig.legend()
+
+
+        if savefig:
+            fig.savefig(f"{self.mcmc_dir}/{self.title}_data")
 
     def start_run(self, save=True):
         if self.verbose:
             print(f"Now starting MCMC run")
             print(f'-----------------------------------------')
-
-        if self.verbose:
-            plt.plot(self.ells, self.model(self.theta_true))
-            plt.errorbar(self.ells, self.datapoints.flatten(), marker='.', ls='', yerr=self.err)
 
         chains_fn = f"{self.mcmc_dir}/saved_chains.h5"
         save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
@@ -492,7 +538,13 @@ class MCMC:
                 #      args=[datapoints, err, theta_true, lmask, which_params],
                         moves=zeus.moves.GlobalMove(self.rescale_cov), vectorize=self.vectorize)
         
-        self.sampler.run_mcmc(start, self.nsteps, callbacks=[save_progress, autocorr_check, R_check, miniter_check])
+        if self.dryrun:
+            callbacks = None
+        
+        elif not self.dryrun:
+            callbacks = [save_progress, autocorr_check, R_check, miniter_check]
+        
+        self.sampler.run_mcmc(start, self.nsteps, callbacks=callbacks)
         end_time = time.time()
 
         if self.verbose:
@@ -505,11 +557,11 @@ class MCMC:
             np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
             np.save(f'{self.mcmc_dir}/R', R_check.estimates)
 
-            fig = corner.corner(self.sampler.get_chain(flat=True))
+            fig = corner.corner(self.sampler.get_chain(flat=True), truths=list(self.truths.values())[5-len(self.which_params):])
             fig.savefig(f'{self.mcmc_dir}/corner.png')
 
         if self.verbose:
             print('Done, YAY!')
 
-        return sampler
+        return self.sampler
 

@@ -4,6 +4,7 @@ import logging
 import sys
 import numpy as np
 import copy as cp
+import h5py
 
 from scipy.interpolate import CubicSpline
 from alfred.parameters import modelparams_Gorce2022, base_dir
@@ -153,6 +154,38 @@ def smooth_Pee(sim):
     Pee = np.asarray(Pee).T
 
     return k, Pee
+
+def load_samples(dir, verbose=True, flatten=True):
+    if verbose:
+        print(f"Loading samples from {dir}...")
+    with h5py.File(f"{dir}/saved_chains.h5", "r") as hf:
+
+        samples = np.copy(hf['samples'])
+        lp = np.copy(hf['logprob'])
+
+        if flatten:
+            samples = samples.reshape((samples.shape[0] * samples.shape[1], samples.shape[2]))
+            lp = lp.flatten()
+
+    return samples, lp
+
+def summon_emu(dir, base=f"{base_dir}/emulators"):
+    import joblib
+    import keras
+    from alfred.emulator import WeightedMSELoss
+
+    path = f"{base}/{dir}"
+
+    scalerX = joblib.load(f"{path}/scalerX.pkl")
+    scalerY = joblib.load(f"{path}/scalerY.pkl")
+    model= keras.models.load_model(f"{path}/model.keras")
+
+    emu = {'scalerX': scalerX,
+        'scalerY': scalerY,
+        'model': model}
+    
+    return emu
+
 
 # import matplotlib as m
 # cmap = m.cm.get_cmap('Blues')
