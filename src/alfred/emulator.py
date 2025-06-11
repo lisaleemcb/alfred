@@ -405,7 +405,6 @@ class NeuralNetwork(Emulator):
         return y
     
     def save(self, dir, path=f"{base_dir}/emulators"):
-        print(base_dir)
         os.makedirs(f"{path}/{dir}")
         self.model.save(f"{path}/{dir}/model.keras")
 
@@ -420,7 +419,7 @@ class NeuralNetwork(Emulator):
                                                 uncertainties=self.uncertainties)
 
         if self.verbose:
-            print(f"Emulator files saved in {dir}")
+            print(f"Emulator files saved in {path}/{dir}!")
 
     @classmethod
     def load(cls, dir, path=f"{base_dir}/emulators", load_data=False):

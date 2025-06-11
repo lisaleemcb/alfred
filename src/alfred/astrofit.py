@@ -295,7 +295,8 @@ class MCMC:
         self.showfigs = showfigs
         self.dryrun = dryrun
         if self.verbose:
-            print(f"doing a dry run...")
+            if self.dryrun:
+                print(f"doing a dry run...")
         if not self.dryrun:
             os.makedirs(self.mcmc_dir)
 
@@ -316,7 +317,7 @@ class MCMC:
             self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
             if self.verbose:
                 print(f"Running with nuisance parameter, A...")
-        self.Amean, self.Asigma = Astats
+        self.Astats = Astats
 
         if emu is not None:
             self.emu = emu
@@ -403,11 +404,6 @@ class MCMC:
             print(self.truths)
             print(f"using emulator version {self.config.emu}...")
 
-        if not self.dryrun:
-            if self.verbose:
-                print(f"saving data to ...{self.mcmc_dir}/data")
-            np.savez(f"{self.mcmc_dir}/data", p0=self.p0, lmask=self.lmask, truths=self.truths, ells=self.ells, datapoints=self.datapoints, err=self.err)
-
 
     def init_run(self, list_emus=None, savefig=True):
         if self.verbose:
@@ -442,15 +438,29 @@ class MCMC:
                     return A * emulator.kemu(p, **emu)[lmask]
                 elif p.ndim == 2:
                     return A[:,None] * emulator.kemu(p, **emu)[:, lmask]
-
+            
         self.model = model
+        if not self.dryrun:
+            if self.verbose:
+                print(f"saving data to ...{self.mcmc_dir}/data")
+            np.savez(f"{self.mcmc_dir}/data",
+                        p0=self.p0,
+                        lmask=self.lmask,
+                        truths=self.truths,
+                        ells=self.ells,
+                        model=self.model(np.asarray(list(self.truths.values()))),
+                        datapoints=self.datapoints,
+                        err=self.err)
+
+
         def lnprob_prepped(params):
             if np.any(self.A is not None):
                 model_params = params[:,:-1]
                 self.A = params[:,-1] 
+                self.Amean = self.Astats[0] * np.ones_like(self.A)
+                self.Asigma = self.Astats[1] * np.ones_like(self.A)
 
-                passA =  np.all((self.A > .9) & (self.A < 1.1))
-                passA = np.where(passA, 0, -np.inf)
+                passA = -.5 * (self.A - self.Amean)**2.0 / self.Asigma**2.0
                 # print(f"model_params: {model_params}")
                 # print(f"resetting A to  A={self.A}")
                 # print(f"in keeping with the lp of A: {passA}")
@@ -473,7 +483,7 @@ class MCMC:
             print(f"datapoints: {self.datapoints.shape}")
             print(f"err: {self.err.shape}")
 
-            if self.showfigs:
+            if self.showfigs or savefig:
                 ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data')
                 ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
                 ax.errorbar(self.ells, self.datapoints, color='green', marker='.', ls='', yerr=self.err, label='observations')
@@ -484,7 +494,7 @@ class MCMC:
 
 
         if savefig:
-            fig.savefig(f"{self.mcmc_dir}/{self.title}_data")
+            fig.savefig(f"{self.mcmc_dir}/data.png")
 
     def start_run(self, save=True):
         if self.verbose:
@@ -557,7 +567,17 @@ class MCMC:
             np.save(f'{self.mcmc_dir}/tau', autocorr_check.estimates)
             np.save(f'{self.mcmc_dir}/R', R_check.estimates)
 
-            fig = corner.corner(self.sampler.get_chain(flat=True), truths=list(self.truths.values())[5-len(self.which_params):])
+            fig = corner.corner(self.sampler.get_chain(flat=True)[:,:3],
+                                 truths=list(self.truths.values())[5-len(self.which_params):])
+
+            # Extract the axes
+            ndim = len(list(self.truths.values())[5-len(self.which_params):])
+            axes = np.array(fig.axes).reshape((ndim, ndim))
+
+            # Loop over the diagonal
+            for i in range(ndim):
+                ax = axes[i, i]
+                ax.axvline(self.sampler.get_chain(flat=True)[:,i].mean(), color="deeppink")
             fig.savefig(f'{self.mcmc_dir}/corner.png')
 
         if self.verbose:

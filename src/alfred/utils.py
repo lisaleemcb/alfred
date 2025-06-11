@@ -169,7 +169,7 @@ def load_samples(dir, verbose=True, flatten=True):
 
     return samples, lp
 
-def summon_emu(dir, base=f"{base_dir}/emulators"):
+def summon_emu(dir, base=f"{base_dir}/emulators", verbose=False):
     import joblib
     import keras
     from alfred.emulator import WeightedMSELoss
@@ -183,6 +183,9 @@ def summon_emu(dir, base=f"{base_dir}/emulators"):
     emu = {'scalerX': scalerX,
         'scalerY': scalerY,
         'model': model}
+    
+    if verbose:
+        print(f"SUMMONING THE EMU!!! From {path}...")
     
     return emu
 
