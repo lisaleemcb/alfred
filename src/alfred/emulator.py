@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import pandas as pd
 
+import json
 import joblib
 import keras
 import tensorflow as tf
@@ -84,7 +85,7 @@ class Emulator:
     """A base class with for kSZ emulator."""
     def __init__(self, features=None,
                 dataset=None,
-                hyperparameters=None,
+                config=None,
                 splits=None,
                 data_dir=f'/{home_dir}',
                 scale_data=True,
@@ -105,7 +106,7 @@ class Emulator:
         
         self.dataset = dataset
         self.features = features
-        self.hyperparameters = hyperparameters
+        self.config = config
         self.splits = splits
         self.data_dir = data_dir
         self.X_train = X_train
@@ -280,29 +281,30 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, hyperparameters, dataset=None, features=None, splits=None,
+    def __init__(self, config, dataset=None, features=None, splits=None,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
         super().__init__(features=features, dataset=dataset, splits=splits, 
-                        hyperparameters=hyperparameters,
+                        config=config,
                         scale_data=scale_data, log_data=log_data,
                         method=method, verbose=verbose)
         
         if (dataset is None) == (splits is None):
             raise ValueError("You must provide either a full dataset, or the splits of a dataset (in form [X_train, X_test, y_train, y_test])")
 
-        self.hyperparameters = hyperparameters
+        self.config = config
+        self.seed = 42
         self.features = features
         self.splits = splits
-        self.neurons = self.hyperparameters['neurons']
-        self.epochs = self.hyperparameters['epochs']
-        self.nlayers = self.hyperparameters['nlayers']
-        self.uncertainties = self.hyperparameters['uncertainties']
-        self.batch_normalize = self.hyperparameters['batch_normalize']
-        self.add_dropout = self.hyperparameters['add_dropout']
-        self.early_stop = self.hyperparameters['early_stop']
-        self.reduce_lr = self.hyperparameters['reduce_lr']
+        self.neurons = self.config['neurons']
+        self.epochs = self.config['epochs']
+        self.nlayers = self.config['nlayers']
+        self.uncertainties = self.config['uncertainties']
+        self.batch_normalize = self.config['batch_normalize']
+        self.add_dropout = self.config['add_dropout']
+        self.early_stop = self.config['early_stop']
+        self.reduce_lr = self.config['reduce_lr']
                 
         self.ndata = None
 
@@ -314,8 +316,8 @@ class NeuralNetwork(Emulator):
 
     def regress(self, kSZ=True):
         if self.verbose:
-            print(f"Now running regression with hyperparameters:")
-            print(f"\t {self.hyperparameters}")
+            print(f"Now running regression with config:")
+            print(f"\t {self.config}")
         
     
         # Train the model with validation data
@@ -404,49 +406,61 @@ class NeuralNetwork(Emulator):
 
         return y
     
-    def save(self, dir, path=f"{base_dir}/emulators"):
-        os.makedirs(f"{path}/{dir}")
-        self.model.save(f"{path}/{dir}/model.keras")
+    def save(self, save_dir, base_path=f"{base_dir}/emulators"):
+        path = f"{base_path}/{save_dir}"
+        # Define directory
+        os.makedirs(path, exist_ok=False)
+        # Save the model
+        self.model.save(os.path.join(path, "model.keras"))
 
-        joblib.dump(self.scalerX, f"{path}/{dir}/scalerX.pkl")
-        joblib.dump(self.scalerY, f"{path}/{dir}/scalerY.pkl")
+        # Save the scalers
+        joblib.dump(self.scalerX, os.path.join(path, "scalerX.pkl"))
+        joblib.dump(self.scalerY, os.path.join(path, "scalerY.pkl"))
 
-        np.savez(f"{path}/{dir}/training_files", X_train=self.descale(self.X_train, X_or_y='X'),
+        # Save metadata (as a dict)
+        np.savez(f"{path}/training_files", X_train=self.descale(self.X_train, X_or_y='X'),
                                                 X_test=self.descale(self.X_test, X_or_y='X'),
                                                 y_train=self.descale(self.y_train[:,:self.ndata]), 
                                                 y_test=self.descale(self.y_test[:,:self.ndata]),
-                                                hyperparameters=self.hyperparameters,
+                                                seed=self.seed,
+                                                config=self.config,
                                                 uncertainties=self.uncertainties)
 
         if self.verbose:
-            print(f"Emulator files saved in {path}/{dir}!")
+            print(f"Emulator files saved in {path}.")
 
     @classmethod
-    def load(cls, dir, path=f"{base_dir}/emulators", load_data=False):
-        scalerX = joblib.load(f"{path}/{dir}/scalerX.pkl")
-        scalerY = joblib.load(f"{path}/{dir}/scalerY.pkl")
-        model = tf.keras.models.load_model(f"{path}/{dir}/model.keras")
+    def load(cls, saved_dir, base_path=f"{base_dir}/emulators", load_data=False):
+        path = f"{base_path}/{saved_dir}"
+        from tensorflow.keras.models import load_model
 
-        instance = cls(scalerX=scalerX, scalerY=scalerY, model=model)
+        # Load components
+        model = load_model(os.path.join(path, "model.keras"))
+        scalerX = joblib.load(os.path.join(path, "scalerX.pkl"))
+        scalerY = joblib.load(os.path.join(path, "scalerY.pkl"))
+        metadata = np.load(os.path.join(path, 'training_files.npz'), allow_pickle=True)
 
+        splits = None
         if load_data:
-            X_train = np.load(f"{path/{X_train}}")
-            X_test  = np.load(f"{path/{X_test}}")
-            y_train  = np.load(f"{path/{y_train}}")
-            y_test  = np.load(f"{path/{y_test}}")
+            X_train = metadata['X_train']
+            X_test  = metadata['X_test']
+            y_train  = metadata['y_train']
+            y_test  = metadata['y_test']
+            splits = [X_train, X_test, y_train, y_test]
 
-            instance.X_train = X_train
-            instance.X_test = X_test
-            instance.y_train = y_train
-            instance.y_test = y_test
+
+        instance = cls(config=metadata['config'].item(), splits=splits)
+        instance.scalerX = scalerX
+        instance.scalerY = scalerY
+        instance.model = model
 
         return instance
 
 class RandomForest(Emulator):
-    def __init__(self, dataset, hyperparameters, features, method='Random Forest', verbose=True):
+    def __init__(self, dataset, config, features, method='Random Forest', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
-        super().__init__(dataset=dataset, hyperparameters=hyperparameters, 
+        super().__init__(dataset=dataset, config=config, 
                          features=features, method=method, verbose=verbose)
         
     def regress(self, X_train, X_test, y_train, y_test):
