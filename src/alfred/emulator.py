@@ -11,6 +11,7 @@ import joblib
 import keras
 import tensorflow as tf
 
+from tensorflow.keras import backend as K # for reproducibility
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, Dense, Dropout, BatchNormalization, ELU, LeakyReLU
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
@@ -86,6 +87,7 @@ class Emulator:
     def __init__(self, features=None,
                 dataset=None,
                 config=None,
+                seed=None,
                 splits=None,
                 data_dir=f'/{home_dir}',
                 scale_data=True,
@@ -107,6 +109,7 @@ class Emulator:
         self.dataset = dataset
         self.features = features
         self.config = config
+        self.seed = seed
         self.splits = splits
         self.data_dir = data_dir
         self.X_train = X_train
@@ -130,7 +133,7 @@ class Emulator:
         """Describes the class."""
         
         if self.verbose:
-            print('Prepping data for regresson')
+            print('prepping data for regression...')
             
         # self.params = np.asarray(self.dataset)
     
@@ -281,12 +284,12 @@ class Emulator:
 
 
 class NeuralNetwork(Emulator):
-    def __init__(self, config, dataset=None, features=None, splits=None,
+    def __init__(self, config, seed=None, dataset=None, features=None, splits=None,
                   scale_data=True, log_data=True, method='Neural Network', verbose=True):
         """First subclass with a unique implementation."""
         # Call the base class initializer to set up the common attributes
         super().__init__(features=features, dataset=dataset, splits=splits, 
-                        config=config,
+                        config=config, seed=seed,
                         scale_data=scale_data, log_data=log_data,
                         method=method, verbose=verbose)
         
@@ -294,7 +297,7 @@ class NeuralNetwork(Emulator):
             raise ValueError("You must provide either a full dataset, or the splits of a dataset (in form [X_train, X_test, y_train, y_test])")
 
         self.config = config
-        self.seed = 42
+        self.seed = seed
         self.features = features
         self.splits = splits
         self.neurons = self.config['neurons']
@@ -314,12 +317,27 @@ class NeuralNetwork(Emulator):
             elif self.splits is not None:
                 self.uncertainties = np.zeros_like(splits[2][0])
 
+        if self.seed is not None:
+            if self.verbose:
+                print(f"random seed is set...")
+            import random 
+
+            os.environ['PYTHONHASHSEED'] = str(self.seed)
+            random.seed(self.seed)
+            np.random.seed(self.seed)
+            tf.random.set_seed(self.seed)
+
+            # Optional: Configure session for full reproducibility (slower!)
+            # For TensorFlow 2.x and GPU use:
+            os.environ['TF_DETERMINISTIC_OPS'] = '1'
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''  # Optional: restrict GPU for simplicity
+
+
     def regress(self, kSZ=True):
         if self.verbose:
-            print(f"Now running regression with config:")
+            print(f"running regression with config:")
             print(f"\t {self.config}")
-        
-    
+
         # Train the model with validation data
         early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
