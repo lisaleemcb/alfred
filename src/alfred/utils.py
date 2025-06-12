@@ -117,7 +117,7 @@ def find_index(arr):
     print('No monotonically increasing part of this function. Are you sure this is correct?')
     return np.nan
 
-def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir='/Users/emcbride/Datasets/LoReLi'):
+def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir=base_dir):
     sims = []
 
     path = f'{base_dir}/{dir}'
