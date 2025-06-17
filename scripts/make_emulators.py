@@ -52,7 +52,7 @@ df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
 df = df.loc[df.index.intersection(sims)]
 
 
-validation_sims = np.load(f"/Users/emcbride/Datasets/LoReLi/emulators/{dir}/validation_sims.npy")
+validation_sims = np.load(f"{dir}/validation_sims.npy")
 # validation = df.sample(n=int(.2 * len(df)))
 # np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
 
