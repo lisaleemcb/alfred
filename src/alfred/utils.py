@@ -189,7 +189,6 @@ def summon_emu(dir, base=f"{base_dir}/emulators", verbose=False):
     
     return emu
 
-
 # import matplotlib as m
 # cmap = m.cm.get_cmap('Blues')
 # norm = m.colors.Normalize(vmin=min_chi2-10, vmax=min_chi2+20.)

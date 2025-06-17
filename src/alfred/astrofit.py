@@ -79,12 +79,17 @@ def xe2tau(z, xe):
         tofz = cumulative_trapezoid(integ, z, initial=0)
 
         return tofz
-
+    
 def whatthetau(params):
     xemu_Planck = keras_xe_emul.xe_emul_array(ztau, params, plot=False)
     tau = xe2tau(ztau, xemu_Planck)[:,-1]
 
     return tau
+
+def addtau2chains(chain, truths, which_params):
+    whatthetau(fill(chain, truths, df.columns[2:]))
+
+    return chain
 
 
 def lnprior(theta, truths, priors,

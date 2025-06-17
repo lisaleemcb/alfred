@@ -51,10 +51,12 @@ sims = utils.get_sims('nells30_v5', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
 df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
 df = df.loc[df.index.intersection(sims)]
 
-validation = df.sample(n=int(.2 * len(df)))
-np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
 
-df = df.drop(validation.index, errors='ignore')
+validation_sims = np.load(f"/Users/emcbride/Datasets/LoReLi/emulators/{dir}/validation_sims.npy")
+# validation = df.sample(n=int(.2 * len(df)))
+# np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
+
+df = df.drop(validation_sims, errors='ignore')
 
 dataset = np.zeros((len(df), 30))
 for i, sn in enumerate(df.index):
@@ -99,12 +101,6 @@ print(f"Saving analysis to {dir}...")
 print(f"config settings are:")
 print(f"\t{config}")
 print()
-
-print('reading in database...')
-sims = utils.get_sims('nells30_v5', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
-df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
-df = df.loc[df.index.intersection(sims)]
-validation_sims = np.load(f"/Users/emcbride/Datasets/LoReLi/emulators/{dir}/validation_sims.npy")
 
 dataset = np.zeros((len(df), 30))
 for i, sn in enumerate(df.index):
@@ -207,3 +203,5 @@ ax[3,0].set_ylabel(f"(data / model) \n validation sims")
 
 ax[0,0].legend()
 ax[1,0].set_ylim(-0.02, 0.02)
+
+fig.savefig(f"{batchdir}/residuals.png")
