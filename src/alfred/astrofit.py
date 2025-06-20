@@ -273,6 +273,7 @@ class MCMC:
                     datapoints=None,
                     p0=None,
                     A=None,
+                    Ashape=None,
                     Astats=[0.0, .1],
                     emu=None,
                     priors=priors,
@@ -318,6 +319,10 @@ class MCMC:
 
         self.p0 = p0
         self.A = A
+        if Ashape is None:
+            self.Ashape = np.ones_like(self.datapoints)
+        elif Ashape is not None:
+            self.Ashape = Ashape
         if self.A is not None:
             self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
             if self.verbose:
@@ -433,6 +438,7 @@ class MCMC:
             def model(p, A=None, lmask=self.lmask, emu=self.emu):
                 if A is None:
                     A = np.array([1])
+
                 #     mp = p
                 # elif self.A is not None:
                 #     A = p[-1]
@@ -440,9 +446,9 @@ class MCMC:
 
          #       print(f"Inside model A={A}")
                 if p.ndim == 1:
-                    return A * emulator.kemu(p, **emu)[lmask]
+                    return A * self.Ashape[lmask] * emulator.kemu(p, **emu)[lmask]
                 elif p.ndim == 2:
-                    return A[:,None] * emulator.kemu(p, **emu)[:, lmask]
+                    return A[:,None] * self.Ashape[None,lmask] * emulator.kemu(p, **emu)[:,lmask]
             
         self.model = model
         if not self.dryrun:

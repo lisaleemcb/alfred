@@ -38,7 +38,7 @@ from alfred.astrofit import *
 config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD.toml")
 config = SimpleNamespace(**config)
 
-batchdir = 'batch_setrandomseed'
+batchdir = 'setrandomseed3'
 dir = f"{base_dir}/emulators/{batchdir}"
 print(f"Saving emulators to {dir}...")
 
@@ -51,12 +51,13 @@ sims = utils.get_sims('nells30_v5', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
 df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
 df = df.loc[df.index.intersection(sims)]
 
+validation = df.sample(n=int(.2 * len(df)))
+np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
+
+df = df.drop(validation.index, errors='ignore')
 
 validation_sims = np.load(f"{dir}/validation_sims.npy")
-# validation = df.sample(n=int(.2 * len(df)))
-# np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
-
-df = df.drop(validation_sims, errors='ignore')
+# df = df.drop(validation_sims, errors='ignore')
 
 dataset = np.zeros((len(df), 30))
 for i, sn in enumerate(df.index):
@@ -121,7 +122,7 @@ for index, version in enumerate(emu_labels):
    # splits = [setup['X_train'], setup['X_test'], setup['y_train'], setup['y_test']]
     for i in range(nruns):
     #    print(f"On run {i} of {emu_labels[index]} setup")
-        emu = utils.summon_emu(f"{dir}/emu{version}_run{i}", verbose=True)
+        emu = utils.summon_emu(f"{batchdir}/emu{version}_run{i}", verbose=True)
         emus.append(emu)    
 
 fig, ax = plt.subplots(4,len(emu_labels), sharex=True, sharey='row', figsize=(16,8))
@@ -191,8 +192,8 @@ for index, version in enumerate(emu_labels):
         ratios.append(ratio)
 
     #ax[0,index].plot(ells[indices], all_spectra.mean(axis=0), color='red', alpha=1.0) 
-    ax[1,index].plot(ells[indices], np.asarray(all_L1s).mean(axis=0), color='red', alpha=1.0)
-    ax[3,index].plot(ells[indices], np.asarray(all_ratios).mean(axis=0), color='red', alpha=1.0)  
+    ax[1,index].plot(ells[indices], np.asarray(all_L1s[5*index+i:5*index+i + 5]).mean(axis=0), color='red', alpha=1.0)
+    ax[3,index].plot(ells[indices], np.asarray(all_ratios[5*index+i: 5*index+i + 5]).mean(axis=0), color='red', alpha=1.0)  
 
     ax[0,index].set_title(f"Emulator {emu_labels[index]}")
 # ax[1].errorbar(ells[indices], np.zeros_like(ells[indices]), yerr=, color='black', alpha=.25)

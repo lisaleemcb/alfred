@@ -147,8 +147,9 @@ class Emulator:
         if self.splits is None:
             X_train, X_test, y_train, y_test = train_test_split(self.features,
                                                                 self.dataset,
-                                                                test_size=0.2)
-                                                           #   random_state=42)
+                                                                test_size=0.2,
+                                                                random_state=self.seed,
+                                                                shuffle=True)
         elif self.splits is not None:
             X_train, X_test, y_train, y_test = self.splits
 
