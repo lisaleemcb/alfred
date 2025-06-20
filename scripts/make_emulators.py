@@ -51,13 +51,12 @@ sims = utils.get_sims('nells30_v5', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
 df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
 df = df.loc[df.index.intersection(sims)]
 
-validation = df.sample(n=int(.2 * len(df)))
-np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
-
-df = df.drop(validation.index, errors='ignore')
+# validation = df.sample(n=int(.2 * len(df)))
+# np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
+# df = df.drop(validation.index, errors='ignore')
 
 validation_sims = np.load(f"{dir}/validation_sims.npy")
-# df = df.drop(validation_sims, errors='ignore')
+df = df.drop(validation_sims, errors='ignore')
 
 dataset = np.zeros((len(df), 30))
 for i, sn in enumerate(df.index):

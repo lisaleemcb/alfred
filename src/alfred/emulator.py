@@ -320,7 +320,7 @@ class NeuralNetwork(Emulator):
 
         if self.seed is not None:
             if self.verbose:
-                print(f"random seed is set...")
+                print(f"random seed is set to {self.seed}...")
             import random 
 
             os.environ['PYTHONHASHSEED'] = str(self.seed)
