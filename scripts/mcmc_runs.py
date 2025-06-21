@@ -40,15 +40,15 @@ def main():
     print("MCMC RUNS")
     print('========================================================')
 
-  #  config_files = [f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD.toml",
-                   # f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_Planck.toml",
-                   # f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise.toml", 
-    # config_files = [f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise_Planck.toml",
-    #                 f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4.toml",
-    #                 f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_Planck.toml",
-    #                 f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_noise.toml",
-    #                 f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_noise_Planck.toml",
-    config_files = [f"{home_dir}/alfred/scripts/config_files/mcmc_SO-LAT.toml",
+    config_files = [f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD.toml",
+                   f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_Planck.toml",
+                   f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise.toml", 
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-HD_noise_Planck.toml",
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4.toml",
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_Planck.toml",
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_noise.toml",
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_CMB-S4_noise_Planck.toml",
+                    f"{home_dir}/alfred/scripts/config_files/mcmc_SO-LAT.toml",
                     f"{home_dir}/alfred/scripts/config_files/mcmc_SO-LAT_Planck.toml",
                     f"{home_dir}/alfred/scripts/config_files/mcmc_SO-LAT_noise.toml",
                     f"{home_dir}/alfred/scripts/config_files/mcmc_SO-LAT_noise_Planck.toml"
@@ -59,7 +59,7 @@ def main():
         print(f"Now initialising mcmc run {config['title']}...")
         print()
 
-        dir = f"{base_dir}/inference/runs_simdata"
+        dir = f"{base_dir}/inference/productionruns1"
         
         print(f"Saving analysis to {dir}...")
 
@@ -76,8 +76,6 @@ def main():
         else:
             datapoints = None
 
-        emu_dir = f"{base_dir}/inference/emulator_tests_run1/emu_v2_dataset_v2/nn_emulator"
-
         print('====================================================================')
         print(f"Running analysis with {emu_dir} and {config['survey']}")
         print('====================================================================')
@@ -86,15 +84,7 @@ def main():
         if config['load_emulator']:
             print(f'loading emulator from file in {emu_dir}...')
 
-            from alfred.emulator import WeightedMSELoss
-
-            scalerX = joblib.load(f"{emu_dir}/scalerX.pkl")
-            scalerY = joblib.load(f"{emu_dir}/scalerY.pkl")
-            model = keras.models.load_model(f"{emu_dir}/model.keras")
-
-            emu = {'scalerX': scalerX,
-                'scalerY': scalerY,
-                'model': model}
+            emu = utils.summon_emu('')
             
             testing = False
             if testing:
@@ -104,12 +94,22 @@ def main():
             config['emu'] = 'input_emu'
 
             print(f"Finished loading emulator, now running MCMC...")
+        mcmc_run = MCMC(config,
+                        dir=f"{dir}",
+                        ells=ells[indices],
+                        p0=draws(ndraws=config.nwalkers)[:,2:], 
+                        emu=summon_emu(f"{nndir}/emu{version}_run{n}"),
+                        datapoints=datapoints,
+                        A=np.random.uniform(.99,1.01, size=config.nwalkers),
+                        Ashape=shapes[0,n].mean(axis=0),
+                        Astats=[Amean, Asigma],
+                #     dryrun=True,
+                    #    showfigs=True,
+                        verbose=True)
 
-            mcmc_run = MCMC(config, dir=dir, ells=ells[indices], emu=emu, datapoints=datapoints, verbose=True)
-            mcmc_run.init_data(savefig=True)
-            mcmc_run.init_run()
-
-            mcmc_run.start_run(save=True)
+        mcmc_run.init_data()
+        mcmc_run.init_run(savefig=True)
+        sampler = mcmc_run.start_run(save=True)
 
 
 if __name__ == "__main__":

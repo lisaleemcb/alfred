@@ -495,9 +495,9 @@ class MCMC:
             print(f"err: {self.err.shape}")
 
             if self.showfigs or savefig:
-                ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data')
+                ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data truth')
                 ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
-                ax.errorbar(self.ells, self.datapoints, color='green', marker='.', ls='', yerr=self.err, label='observations')
+                ax.errorbar(self.ells, self.datapoints, color='gold', marker='.', ls='', yerr=self.err, label='observations')
                 ax.set_xlabel('ell')
                 ax.set_ylabel('Dell')
 

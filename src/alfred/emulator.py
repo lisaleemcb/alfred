@@ -328,6 +328,11 @@ class NeuralNetwork(Emulator):
             np.random.seed(self.seed)
             tf.random.set_seed(self.seed)
 
+            # torch.manual_seed(seed)
+            # torch.cuda.manual_seed(seed)
+            # torch.backends.cudnn.deterministic = True
+            # torch.backends.cudnn.benchmark = True
+
             # Optional: Configure session for full reproducibility (slower!)
             # For TensorFlow 2.x and GPU use:
             os.environ['TF_DETERMINISTIC_OPS'] = '1'
