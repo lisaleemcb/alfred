@@ -461,7 +461,9 @@ class MCMC:
                         ells=self.ells,
                         model=self.model(np.asarray(list(self.truths.values()))),
                         datapoints=self.datapoints,
-                        err=self.err)
+                        err=self.err,
+                        Ashape=self.Ashape,
+                        Astats=self.Astats)
 
 
         def lnprob_prepped(params):
