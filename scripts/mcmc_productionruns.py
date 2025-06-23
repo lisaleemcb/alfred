@@ -86,13 +86,12 @@ def main():
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     print(f"Now initialising mcmc run {config['title']}...")
     print()
-    dir = f"{base_dir}/inference/productionruns1"
+    dir = f"{base_dir}/inference/productionruns2"
     print(f"Saving analysis to {dir}...")
     print()
     config['survey'] = args.survey
     config['mcmcdir'] = dir
     config = SimpleNamespace(**config)
-
 
     noiseless = {'addnoise': False,
                 'addPlanck': False}
@@ -130,6 +129,7 @@ def main():
                             surveys.telescopes[config.survey],
                             include_emulator=False)
     err =np.sqrt(np.diag(err_cov))
+    noise = np.random.normal(scale=err)
 
 
     for i, setup in enumerate(setups):
@@ -142,7 +142,6 @@ def main():
             setattr(config, key, setup[key])
 
         if config.addnoise:
-            noise = np.random.normal(scale=err)
             datapoints += noise
             title += f"_noise"
 
