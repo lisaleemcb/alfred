@@ -224,10 +224,23 @@ def lnlike(theta, model, data, err):
     return -0.5 * ((data - test) ** 2.0 / err**2.0).sum(axis=1)
 
 
-def chi2_contribution(theta, test, data, err,truths=None, which_params='all'):
-   # theta = fill(guess, truths, which_params)
-   # test = model(theta)
-    return ((data - test) ** 2.0 / err**2.0)
+def chi2_contribution(guess, model, data, err, truths=None, which_params=df.columns[2:],
+                        vectorize=False, priors2d=priors2d, add2d=True,
+                        Planck=Planck, Planck_err=Planck_err, addPlanck=False,
+                        debug=False):
+    
+    theta = fill(guess, truths, which_params)
+    # theta = guess
+    
+    lp = lnprior(theta, truths, priors,
+                priors2d=priors2d, add2d=add2d,
+                Planck=Planck, Planck_err=Planck_err,
+                addPlanck=addPlanck, debug=debug)
+    
+    lp = lp[:,None] * np.ones_like(data)
+
+    test = model(theta)
+    return ((data - test) ** 2.0 / err**2.0) + lp
 
 def gelman_rubin_rhat(chains):
     """
