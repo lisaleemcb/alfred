@@ -32,7 +32,7 @@ telescopes ={
 
 delta_ell = np.mean(np.diff(ells))
 indices = list(np.concatenate([np.arange(ells.size)[3:13], np.arange(ells.size)[13::2]]))
-Planck =0.0576 #  0.054
+Planck = 0.0576 #  0.054
 Planck_err = 0.0060 # 0.007
 priors2d = np.load(f'{base_dir}/inference/priors/2dpriors.npz')
 

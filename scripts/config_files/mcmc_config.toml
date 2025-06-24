@@ -41,3 +41,5 @@ vectorize = true
 
 # parameters
 which_params_to_fit = ['tau', 'Mmin', 'fesc'] # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
+Planck = 0.0576 #  0.054
+Planck_err = 0.0060 # 0.007

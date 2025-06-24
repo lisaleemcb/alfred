@@ -47,17 +47,17 @@ def error_cov(ells, datapoints, telescope, verbose=False,
     errors = []
 
     if include_samplevar:
-        sample_var = surveys.sample_var(ells, datapoints, telescope)**2
+        sample_var = surveys.sample_var(ells, datapoints, telescope)**2.0
         if verbose:
             print(f"sample variance: {sample_var}")
         errors.append(sample_var)
     if include_noise:
-        noise = (surveys.noise(ells, telescope, pol=False)/np.sqrt(delta_ell))**2
+        noise = (surveys.noise(ells, telescope, pol=False)/np.sqrt(delta_ell))**2.0
         if verbose:
             print(f"noise: {noise}")
         errors.append(noise)
     if include_emulator:
-        emu_err = surveys.emu_error(ells)
+        emu_err = surveys.emu_error(ells)**2.0
         if verbose:
             print(f"emulator error: {emu_err}")
 

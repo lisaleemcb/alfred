@@ -34,7 +34,7 @@ import alfred.utils as utils
 from alfred.parameters import *
 from alfred.astrofit import *
 
-def get_spectra(emu, config, dir='batch_setrandomseed', base_dir=base_dir):
+def get_spectra(emu, config, dir='setrandomseed3', base_dir=base_dir):
     truth = df.loc[config.sn].to_numpy()
 
     validation_sims = np.load(f"{base_dir}/emulators/{dir}/validation_sims.npy")
@@ -51,7 +51,7 @@ def get_spectra(emu, config, dir='batch_setrandomseed', base_dir=base_dir):
     return true, emulated
 
 
-def extract_A(versions, config, axes=None, nruns=5, dir='batch_setrandomseed', base_dir=base_dir):
+def extract_A(versions, config, axes=None, nruns=5, dir='setrandomseed3', base_dir=base_dir):
     truth = df.loc[config.sn].to_numpy()
     validation_sims = np.load(f"{base_dir}/emulators/{dir}/validation_sims.npy")
     shapes = np.zeros((len(versions), nruns, len(validation_sims), len(ells[indices])))
@@ -86,7 +86,7 @@ def main():
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     print(f"Now initialising mcmc run {config['title']}...")
     print()
-    dir = f"{base_dir}/inference/productionruns2"
+    dir = f"{base_dir}/inference/productionruns3"
     print(f"Saving analysis to {dir}...")
     print()
     config['survey'] = args.survey
