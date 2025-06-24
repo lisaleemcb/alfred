@@ -172,7 +172,7 @@ def main():
                         A=np.random.uniform(.99,1.01, size=config.nwalkers),
                         Ashape=ratios.mean(axis=0),
                         Astats=[Amean, Asigma],
-                        Planck=whatthetau(df.loc[config.sn]),
+                        Planck=whatthetau(df.loc[config.sn].to_numpy()),
                 #     dryrun=True,
                     #    showfigs=True,
                         verbose=True)
