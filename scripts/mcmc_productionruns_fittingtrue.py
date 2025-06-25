@@ -123,6 +123,7 @@ def main():
     ratios = true / emulated
     np.save(f"{dir}/ratios.npy", ratios)
 
+    datapoints = emulator.kemu(df.loc[config.sn].to_numpy(), **emu)
     err_cov = surveys.error_cov(ells[indices],
                             datapoints,
                             surveys.telescopes[config.survey],
