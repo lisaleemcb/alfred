@@ -86,7 +86,7 @@ def main():
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     print(f"Now initialising mcmc run {config['title']}...")
     print()
-    dir = f"{base_dir}/inference/productionruns3"
+    dir = f"{base_dir}/inference/productionruns_fittingtrue"
     print(f"Saving analysis to {dir}...")
     print()
     config['survey'] = args.survey
