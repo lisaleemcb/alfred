@@ -123,7 +123,6 @@ def main():
     ratios = true / emulated
     np.save(f"{dir}/ratios.npy", ratios)
 
-    datapoints = utils.spectra(config.sn)[indices]
     err_cov = surveys.error_cov(ells[indices],
                             datapoints,
                             surveys.telescopes[config.survey],
@@ -139,7 +138,8 @@ def main():
         for key in setup.keys():
             print(f"{key} = {setup[key]}")
             setattr(config, key, setup[key])
-
+            
+        datapoints = utils.spectra(config.sn)[indices]
         if config.addnoise:
             datapoints += noise
             title += f"_noise"
