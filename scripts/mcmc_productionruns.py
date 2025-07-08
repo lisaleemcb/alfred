@@ -34,153 +34,127 @@ import alfred.utils as utils
 from alfred.parameters import *
 from alfred.astrofit import *
 
-def get_spectra(emu, config, dir='setrandomseed3', base_dir=base_dir):
-    truth = df.loc[config.sn].to_numpy()
-
-    validation_sims = np.load(f"{base_dir}/emulators/{dir}/validation_sims.npy")
-    true = np.zeros((len(validation_sims), len(ells[indices])))
-    emulated = np.zeros((len(validation_sims), len(ells[indices])))
-
-    for si, sn in enumerate(validation_sims):
-        truspec = utils.spectra(sn)[indices]
-        emuspec = emulator.kemu(df.loc[sn].to_numpy(), **emu)
-        
-        true[si] = truspec
-        emulated[si] = emuspec
-
-    return true, emulated
-
-
-def extract_A(versions, config, axes=None, nruns=5, dir='setrandomseed3', base_dir=base_dir):
-    truth = df.loc[config.sn].to_numpy()
-    validation_sims = np.load(f"{base_dir}/emulators/{dir}/validation_sims.npy")
-    shapes = np.zeros((len(versions), nruns, len(validation_sims), len(ells[indices])))
-
-    for i, version in enumerate(versions):
-        for n in range(nruns):
-            path = f"{dir}/emu{version}_run{n}"
-            emu = utils.summon_emu(path, verbose=True)
-
-            true, emulated = get_spectra(emu, config, dir=dir)
-            A = true / emulated
-
-            shapes[i,n] = A
-
-    return shapes
 
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="sets what experiment to use.")
     parser.add_argument("--survey", type=str, help="which survey to use")
+    parser.add_argument("--savedir", type=str, help="where to save mcmcs")
+    parser.add_argument("--nndir", type=str, help="which emulator runs to use")
+    parser.add_argument("--version", type=str, help="which version of emulator")
     
     # Parse arguments
     args = parser.parse_args()
     
     print('reading in database...')
-    sims = utils.get_sims('nells30_v5', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
-    df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
-    df = df.loc[df.index.intersection(sims)]
 
-    # validation = df.sample(n=int(.2 * len(df)))
-    # np.save(f"{dir}/validation_sims.npy", validation.index.to_list())
+    validation_sims = np.load(f"{base_dir}/emulators/setrandomseed3/validation_sims.npy")
+    df_validation = df.loc[validation_sims].copy()
+ 
+
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
-    print(f"Now initialising mcmc run {config['title']}...")
-    print()
-    dir = f"{base_dir}/inference/productionruns5"
-    print(f"Saving analysis to {dir}...")
-    print()
-    config['survey'] = args.survey
-    config['mcmcdir'] = dir
     config = SimpleNamespace(**config)
+    print(f"Now initialising mcmc run from config file {config.title}...")
 
-    noiseless = {'addnoise': False,
-                'addPlanck': False}
+    if args.survey:
+        config.survey = args.survey
+    config.savedir = f"{args.savedir}/{config.survey}"
 
-    noiseless_Planck = {'addnoise': False,
-                'addPlanck': True}
+    noiseless = {'title': 'noiseless',
+                    'addnoise': False,
+                    'addPlanck': False}
 
-    addnoise = {'addnoise': True,
-                'addPlanck': False}
+    noiseless_Planck = {'title': 'noiseless_Planck',
+                    'addnoise': False,
+                    'addPlanck': True}
 
-    addnoise_Planck = {'addnoise': True,
-                'addPlanck': True}
+    addnoise = {'title': 'addnoise',
+                    'addnoise': True,
+                    'addPlanck': False}
+
+    addnoise_Planck = {'title': 'addnoise_Planck',
+                    'addnoise': True,
+                    'addPlanck': True}
 
     setups = [noiseless, noiseless_Planck, addnoise, addnoise_Planck]
 
+
     #=================================================================
-    # RUNNING MCMCs
+    # RUNNING MCMC
     #=================================================================
     testing = True
 
     if testing:
-        config.burnin = 500
-        config.nsteps = 2000
+        config.burnin = 2
+        config.nsteps = 10
 
-    emu = summon_emu('v5.1')
-    true, emulated = get_spectra(emu, config,
-                         dir=config.nndir,
-                         base_dir=base_dir)
-    ratios = true / emulated
-    np.save(f"{dir}/ratios.npy", ratios)
-
-    datapoints = utils.spectra(config.sn)[indices]
-    err_cov = surveys.error_cov(ells[indices],
-                            datapoints,
-                            surveys.telescopes[config.survey],
-                            include_emulator=False)
-    err =np.sqrt(np.diag(err_cov))
-    noise = np.random.normal(scale=err)
-
+    config.nndir = args.nndir
 
     for i, setup in enumerate(setups):
-        config.addnoise = False
-        config.addPlanck = False
+        for n in range(5):
+            print(f"Now on run {n}...")
+            # if n != 0:
+            #     continue
+            config.emu_version = f'emu{args.version}_run{n}'
 
-        title = f"{args.survey}"
-        for key in setup.keys():
-            print(f"{key} = {setup[key]}")
-            setattr(config, key, setup[key])
+            for key in setup.keys():
+                        print(f"{key} = {setup[key]}")
+                        setattr(config, key, setup[key])
 
-        datapoints = utils.spectra(config.sn)[indices]
-        if config.addnoise:
-            datapoints += noise
-            title += f"_noise"
+            config.title += f"/run{n}"
 
-        config.addnoise = False
+            if os.path.exists(f'{base_dir}/emulators/{config.nndir}/{config.emu_version}/residuals.npy'):
+                print(f'residuals file at {base_dir}/emulators/{config.nndir}/{config.emu_version}/residuals.npy already exists')
+            else:
+                print('creating residuals files...')
+                emu = summon_emu(f"{config.nndir}/{config.emu_version}")
+                tspec = np.zeros((len(validation_sims), len(ells[indices])))
+                for i, sn in enumerate(df_validation.index):
+                    tspec[i] = utils.spectra(sn)[indices]
 
-        if config.addPlanck:
-            title += f"_Planck"
+                espec = emulator.kemu(df_validation.to_numpy(), **emu)
 
-        config.title = title
-        print(f"Saving to {config.title}...")
-        print()
-        print(ratios.mean(axis=0))
+                residuals = tspec - espec
+                np.save(f"{base_dir}/emulators/{config.nndir}/{config.emu_version}/residuals.npy", residuals)
 
-        print(f"config settings are:")
-        for name, value in vars(config).items():
-            print(f"{name} = {value}")
-        print()
+                print(f"residuals file saved to {base_dir}/emulators/{config.emu_version}/residuals.npy")
+                print()
+            
+            if os.path.exists(f'{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy'):
+                print(f'residuals file at {base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy already exists')
+                ratios = np.load(f"{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy")
+            else:
+                print('creating ratios file...')
+                emu = summon_emu(f"{config.nndir}/{config.emu_version}")
+                tspec = np.zeros((len(validation_sims), len(ells[indices])))
+                for i, sn in enumerate(df_validation.index):
+                    tspec[i] = utils.spectra(sn)[indices]
 
-        Amean = np.mean(ratios.mean(axis=0))
-        Asigma = np.std(ratios, axis=0).mean()
+                espec = emulator.kemu(df_validation.to_numpy(), **emu)
 
-        print(f"Running with Amean={Amean} and Asigma={Asigma}")
-        mcmc_run = MCMC(config,
-                        dir=f"{dir}",
-                        ells=ells[indices],
-                        p0=draws(ndraws=config.nwalkers)[:,2:], 
-                        emu=emu,
-                        datapoints=datapoints,
-                        A=np.random.uniform(.99,1.01, size=config.nwalkers),
-                        Ashape=ratios.mean(axis=0),
-                        Astats=[Amean, Asigma],
-                #     dryrun=True,
-                    #    showfigs=True,
-                        verbose=True)
+                ratios = tspec / espec
+                np.save(f"{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy", ratios)
 
-        mcmc_run.init_data()
-        mcmc_run.init_run(savefig=True)
-        sampler = mcmc_run.start_run(save=True)
+                print(f"ratios file saved to {base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy")
+
+                print()
+
+            mcmc_run = MCMC(config,
+                            ells=ells[indices],
+                            p0=draws(ndraws=config.nwalkers)[:,2:], 
+                        # emu=emu,
+                        # datapoints=datapoints,
+                            A=np.random.uniform(.99,1.01, size=config.nwalkers),
+                            Ashape=ratios.mean(axis=0),
+                            Astats=[np.mean(ratios), np.std(ratios)],
+                        # dryrun=True,
+                        # showfigs=True,
+                            verbose=True,
+                            debug=False)
+
+            mcmc_run.init_data()
+            mcmc_run.init_run(savefig=True)
+            sampler = mcmc_run.start_run(save=True)
 
         print()
 
