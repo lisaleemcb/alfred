@@ -78,6 +78,13 @@ def main():
 
     setups = [noiseless, noiseless_Planck, addnoise, addnoise_Planck]
 
+    datapoints = utils.spectra(config.sn)[indices]
+    err_cov = surveys.error_cov(ells[indices],
+                            datapoints,
+                            surveys.telescopes[config.survey],
+                            include_emulator=False)
+    err =np.sqrt(np.diag(err_cov))
+    noise = np.random.normal(scale=err)
 
     #=================================================================
     # RUNNING MCMC
@@ -138,6 +145,11 @@ def main():
                 print(f"ratios file saved to {base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy")
 
                 print()
+
+            if config.addnoise:
+                datapoints += noise
+
+            config.addnoise = False
 
             mcmc_run = MCMC(config,
                             ells=ells[indices],

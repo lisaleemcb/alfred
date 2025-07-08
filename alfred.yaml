@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python
+  - python=3.11
   - pandas
   - setuptools
   - pyarrow
@@ -19,17 +19,18 @@ dependencies:
   - tqdm
   - zeus-mcmc
   - toml
+  - tensorflow
+  - joblib
+  - mpi4py     # <-- Required for PolyChord
   - pip
   - pip:
       - powerbox
       - anesthetic
       - cobaya
       - pygtc
-      # - black
       - git+https://github.com/lisaleemcb/catwoman.git
-      - git clone https://github.com/CMB-HD/hdlike.git
+      - git+https://github.com/CMB-HD/hdlike.git
+      # - black
       # - openai
       # - alphadoc
       # - 21cmtools
-
-# also MPI is required for polychord
