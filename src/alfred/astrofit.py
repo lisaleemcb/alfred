@@ -23,13 +23,6 @@ from alfred.parameters import *
 from alfred.utils import get_sims, summon_emu
 
 
-telescopes ={
-    'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0},
-    'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5},
-    'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142},
-    'CMB-HD': {'fsky':0.5, 'fwhm':0.5, 'noise':2.7},
-}
-
 delta_ell = np.mean(np.diff(ells))
 indices = list(np.concatenate([np.arange(ells.size)[3:13], np.arange(ells.size)[13::2]]))
 Planck = 0.0576 #  0.054
@@ -108,6 +101,9 @@ def lnprior(theta, truths, priors,
     pass2d = np.ones_like(pass1d, dtype=bool)
     passPlanck = np.zeros_like(pass1d)
 
+    if debug:
+        print(f"pass1d: {pass1d}")
+
     if add2d:
        # Mmin = theta[:,3] # CAREFUL! currently hardcoded (also log10)
        # tau_SR = theta[:,2]  # CAREFUL! currently hardcoded (also log10)
@@ -120,6 +116,8 @@ def lnprior(theta, truths, priors,
 
         pass2d =  (below <= tau_SR) & (tau_SR <= above)
 
+        if debug:
+            print(f"pass2d: {pass2d}")
     
     if addPlanck:
         if verbose:
@@ -193,13 +191,17 @@ def fill(guess, truths, which_params):
 
 def lnprob(guess, model, data, err, truths, priors, Aprior=None,
             which_params='all', vectorize=False,
-            priors2d=priors2d, add2d=True,
+            priors2d=priors2d, add2d=True, justpriors=False,
             Planck=Planck, Planck_err=Planck_err, addPlanck=False,
             debug=False):
 
     theta = fill(guess, truths, which_params)
-    # theta = guess
-    
+
+    if debug:
+        print(f"guess: {guess}")
+        print(f"theta (filled): {theta}")
+        # theta = guess
+        
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
                 Planck=Planck, Planck_err=Planck_err,
@@ -207,39 +209,65 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
     if np.any(Aprior is not None):
         lp += Aprior
 
+    if debug:
+        print(f"lp: {lp}")
+        print(f"Aprior: {Aprior}")
     # if not np.isfinite(lp):
     #     return -np.inf#, 0.
-    ln = lnlike(theta, model, data, err)
+    ln = lnlike(theta, model, data, err, debug=debug)
+
+    if debug:
+        print(f"lp: {lp}")
+        print(f"ln: {ln}")
+        print(f"ln + lp = {lp + ln}")
 
     if not vectorize:
         return (lp + ln)[0]
 
     if np.any(np.isnan(lp + ln)):
         print(f"Guess values {theta} are causing a NaN!")
-    return lp + ln #, model
+    if justpriors:
+        return lp
+    return lp + ln #, model3
 
-def lnlike(theta, model, data, err):
+def lnlike(theta, model, data, err, debug=False):
     test = model(theta)
+
+    if debug:
+        print(f"model: {test}")
+        print(f"data: {data}")
+        print(f"err: {err}")
 
     return -0.5 * ((data - test) ** 2.0 / err**2.0).sum(axis=1)
 
 
-def chi2_contribution(guess, model, data, err, truths=None, which_params=df.columns[2:],
+def chi2_contribution(guess, model, data, priors, err, truths=None, which_params=df.columns[2:],
                         vectorize=False, priors2d=priors2d, add2d=True,
                         Planck=Planck, Planck_err=Planck_err, addPlanck=False,
                         debug=False):
     
+    if debug:
+        print(f"guess: {guess}")
     theta = fill(guess, truths, which_params)
     # theta = guess
-    
+    if debug:
+        print(f"theta: {theta}")
+
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
                 Planck=Planck, Planck_err=Planck_err,
                 addPlanck=addPlanck, debug=debug)
     
+    if debug:
+        print(f"lp is {lp}")
+    
     lp = lp[:,None] * np.ones_like(data)
 
     test = model(theta)
+
+    if debug:
+        print(f"test is {test}")
+        
     return ((data - test) ** 2.0 / err**2.0) + lp
 
 def gelman_rubin_rhat(chains):
@@ -291,25 +319,35 @@ class MCMC:
                     emu=None,
                     priors=priors,
                     priors2d=priors2d,
+                    justpriors=False,
                     Planck=Planck,
                     Planck_err=Planck_err,
                     base_dir=base_dir,
                     dir=None,
                     showfigs=False,
                     dryrun=False,
-                    verbose=False):
+                    verbose=False,
+                    debug=False):
         
         self.config = config
         self.verbose = verbose
+        self.debug= debug
         if self.verbose:
-            print(f"initialising instance of MCMC class...")
+            print(f'-----------------------------------------')
+            print(f"Now initialising MCMC class...")
+            print(f'-----------------------------------------')
+            print(f"Initialising from config file with settings:")
+            for name, value in vars(config).items():
+                print(f"{name} = {value}")
+            print()
+
         self.title = self.config.title
-        if dir is None:
-            self.mcmc_dir = f"{base_dir}/inference/mcmc_runs/{self.title}"
-        elif dir is not None:
-            self.mcmc_dir = f"{dir}/{self.title}"
-        if self.verbose:
-            print(f"placing mcmc results in directory {self.mcmc_dir}")
+
+        if not dryrun:
+            if dir is None:
+                self.mcmc_dir = f"{base_dir}/inference/{config.savedir}/{self.title}"
+            elif dir is not None:
+                self.mcmc_dir = f"{dir}/{self.title}"
 
         self.showfigs = showfigs
         self.dryrun = dryrun
@@ -332,36 +370,21 @@ class MCMC:
 
         self.p0 = p0
         self.A = A
-        if Ashape is None:
-            self.Ashape = np.ones_like(self.datapoints)
-        elif Ashape is not None:
-            self.Ashape = Ashape
-        if self.A is not None:
-            self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
-            if self.verbose:
-                print(f"Running with nuisance parameter, A...")
         self.Astats = Astats
-
+        self.Ashape = Ashape
+        
         if emu is not None:
+            if self.verbose:
+                print(f"using inputted emulator...")
             self.emu = emu
-        # elif self.config.emu == 'v2':
-        #     print(f"using emu: {self.config.emu}")
-        #     self.emu = emu_v2
-        # elif self.config.emu == 'v3':
-        #     print(f"using emu: {self.config.emu}")
-        #     self.emu = emu_v3
-        # elif self.config.emu == 'v3.1':
-        #     print(f"using emu: {self.config.emu}")
-        #     self.emu = emu_v3p1
-        # elif self.config.emu == 'v4':
-        #     print(f"using emu: {self.config.emu}")
-        #     self.emu = emu_v4
-        # elif self.config.emu == 'input_emu':
-        #     print(f"using emu: {self.config.emu}")
-
+        if emu is None:
+            emu_path = f"{self.config.nndir}/{self.config.emu_version}"
+            if self.verbose:
+                print(f"using emulator version {emu_path}...")
+            self.emu = summon_emu(emu_path, verbose=self.verbose)
+       
         self.addnoise = self.config.addnoise
-
-        self.which_params = self.config.which_params_to_fit
+        self.which_params = self.config.which_params
         self.priors = priors
         self.add2d = self.config.add2d
         if self.add2d:
@@ -369,6 +392,7 @@ class MCMC:
         elif not self.add2d:
             self.priors2d = None
         self.addPlanck = self.config.addPlanck
+        self.justpriors = justpriors
         if self.addPlanck:
             self.Planck = Planck
             self.Planck_err = Planck_err
@@ -383,33 +407,50 @@ class MCMC:
         self.ndim = len(self.which_params) + int(np.any(self.A is not None))
         self.rescale_cov = self.config.rescale_cov
 
-        print(f"initialisation complete!")
+        if self.verbose:
+            print()
+            print(f"class initialisation complete!")
+            print()
 
     def init_data(self):
         if self.verbose:
             print(f'-----------------------------------------')
-            print(f"Now initialising data for mcmc run")
+            print(f"Now initialising data for MCMC run")
             print(f'-----------------------------------------')
-        if not self.config.use_data:
-            self.truths = {}
-            for pname in df.columns:
-                self.truths[pname] = getattr(self.config, pname)
 
-        elif self.config.use_data:
-            self.truths = df.loc[self.config.sn].to_dict()
-
+        self.truths = df.loc[self.config.sn].to_dict()
         self.theta_true = np.asarray(list(self.truths.values()))
 
         if self.datapoints is None:
-            if self.verbose:
-                print('Using emulated data for datapoints')
+            if self.config.use_data is True:
+                if self.verbose:
+                    print('using reconstructed kSZ spectrum for datapoints...')
+                from alfred.utils import spectra
+                self.datapoints = spectra(self.config.sn)[indices]
 
-            self.datapoints = emulator.kemu(self.theta_true, **self.emu)
+            elif self.config.use_data is False:
+                if self.verbose:
+                    print('using emulated kSZ spectrum for datapoints...')
+                self.datapoints = emulator.kemu(self.theta_true, **self.emu)
         else:
             if self.verbose:
                 print('Using input data for datapoints')
 
-        self.err_cov = surveys.error_cov(self.ells, self.datapoints, surveys.telescopes[self.telescope])
+        if self.Ashape is None:
+            self.Ashape = np.ones_like(self.datapoints)
+        elif self.A is not None:
+            self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
+
+            if self.verbose:
+                print(f"running with nuisance parameter, A, with Gaussian priors:")
+                print(f"A mean, sigma: {self.Astats}")
+
+
+        self.err_cov = surveys.error_cov(self.ells,
+                                    self.datapoints,
+                                    surveys.telescopes[self.telescope],
+                                    emuerr_file=f'{base_dir}/emulators/{self.config.nndir}/{self.config.emu_version}/residuals.npy',
+                                    verbose=self.verbose)
         self.err =np.sqrt(np.diag(self.err_cov))
 
         if self.addnoise:
@@ -423,31 +464,37 @@ class MCMC:
         self.err = self.err[self.lmask]
 
         if self.verbose:
-            print(f"simulating data with the parameter values:")
-            print(self.truths)
-            print(f"using emulator version {self.config.emu}...")
-
+            print()
+            print(f"data initialisation complete!")
+            print()
 
     def init_run(self, list_emus=None, savefig=True):
         if self.verbose:
-            print(f"Now running initialisation of MCMC run")
             print(f'-----------------------------------------')
-            print(f"putting mcmc chains in {self.mcmc_dir}...")
-            print()
-            print(f"Running the mcmc for {self.title} on the params:")
-            print(f"\t{self.which_params}...")
-            print(f"True values are {self.truths} for simulation {self.config.sn}")
+            print(f"Initialising actual MCMC run")
+            print(f'-----------------------------------------')
+            if not self.dryrun:
+                print(f"putting mcmc chains in {self.mcmc_dir}/...")
+                print()
+
+            print(f"True values for simulation {self.config.sn} are:")
+            for key in self.truths:
+                 print(f"\t {key}={self.truths[key]}")
         
         if list_emus:
             print(f"passed list of emulators...")
-            def model(p, lmask=self.lmask, emu=self.emu):
+            def model(p, A=None, lmask=self.lmask, list_emus=self.emu):
+                if A is None:
+                    A = np.array([1])
+
                 if p.ndim == 1:
-                    return emulator.mechkemu(p, list_emus)[lmask]
+                    return A * emulator.mechkemu(p, list_emus)[lmask]
                 elif p.ndim == 2:
-                    return emulator.mechkemu(p, list_emus)[:, lmask]
+                    return A[:,None] * emulator.mechkemu(p, list_emus)[:, lmask]
 
         elif not list_emus:
-            print(f"single emulator mode...")
+            if self.verbose:
+                print(f"single emulator mode...")
             def model(p, A=None, lmask=self.lmask, emu=self.emu):
                 if A is None:
                     A = np.array([1])
@@ -459,15 +506,15 @@ class MCMC:
 
          #       print(f"Inside model A={A}")
                 if p.ndim == 1:
-                    return A * self.Ashape[lmask] * emulator.kemu(p, **emu)[lmask]
+                    return (A / self.Ashape[lmask]) * emulator.kemu(p, **emu)[lmask]
                 elif p.ndim == 2:
-                    return A[:,None] * self.Ashape[None,lmask] * emulator.kemu(p, **emu)[:,lmask]
+                    return (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, **emu)[:,lmask]
             
         self.model = model
         if not self.dryrun:
             if self.verbose:
-                print(f"saving data to ...{self.mcmc_dir}/data")
-            np.savez(f"{self.mcmc_dir}/data",
+                print(f"saving data to ...{self.mcmc_dir}/data.npz")
+            np.savez(f"{self.mcmc_dir}/data.npz",
                         p0=self.p0,
                         lmask=self.lmask,
                         truths=self.truths,
@@ -490,26 +537,63 @@ class MCMC:
                 # print(f"model_params: {model_params}")
                 # print(f"resetting A to  A={self.A}")
                 # print(f"in keeping with the lp of A: {passA}")
+                # print('')]                
+                if self.debug:
+                    print(f"pass A= {passA} when fitting A")
+            elif np.any(self.A is None):
+                model_params = params
+                passA = None
+
+                if self.debug:
+                    print(f"pass A= {passA} because not fitting A")
+
+            return lnprob(model_params, lambda p: self.model(p, A=self.A), self.datapoints,
+                        self.err, self.truths, self.priors, Aprior=passA,
+                        which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
+                        justpriors=self.justpriors,
+                        Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
+                        vectorize=self.vectorize, debug=self.debug)
+        
+        def chi2_ell(params):
+            if np.any(self.A is not None):
+                model_params = params[:,:-1]
+                self.A = params[:,-1] 
+                self.Amean = self.Astats[0] * np.ones_like(self.A)
+                self.Asigma = self.Astats[1] * np.ones_like(self.A)
+
+                passA = -.5 * (self.A - self.Amean)**2.0 / self.Asigma**2.0
+                # print(f"model_params: {model_params}")
+                # print(f"resetting A to  A={self.A}")
+                # print(f"in keeping with the lp of A: {passA}")
                 # print('')
             elif np.any(self.A is None):
                 model_params = params
                 passA = None
 
-            return lnprob(model_params, lambda p: self.model(p, A=self.A), self.datapoints,
-                        self.err, self.truths, self.priors, Aprior=passA,
+            return chi2_contribution(model_params, lambda p: self.model(p, A=self.A), self.datapoints,
+                        self.priors, self.err, truths=self.truths,
                         which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
                         Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
-                        vectorize=self.vectorize)
+                        vectorize=self.vectorize, debug=False)
             
         self.lnprob_prepped = lnprob_prepped
-
-        fig, ax = plt.subplots()
+        self.chi2_ell = chi2_ell
+        
         if self.verbose:
-            print(f"ells: {self.ells}")
-            print(f"datapoints: {self.datapoints.shape}")
-            print(f"err: {self.err.shape}")
+            true_params = np.asarray(list(self.truths.values()))[2:]
+            if np.any(self.A):
+                true_params = np.asarray([*true_params, 1.0])
+                true_params = true_params[None,:]
+
+            print(f"The value of the likelihood for the true params is: {self.lnprob_prepped(true_params)[0]}")
+
+        if self.verbose:
+            print(f"fitting ell range [{self.ells[0]},{self.ells[-1]}]")
+            # print(f"datapoints: {self.datapoints.shape}")
+            # print(f"err: {self.err.shape}")
 
             if self.showfigs or savefig:
+                fig, ax = plt.subplots()
                 ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data truth')
                 ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
                 ax.errorbar(self.ells, self.datapoints, color='gold', marker='.', ls='', yerr=self.err, label='observations')
@@ -518,20 +602,25 @@ class MCMC:
 
                 fig.legend()
 
+                if savefig:
+                    fig.savefig(f"{self.mcmc_dir}/data.png")
 
-        if savefig:
-            fig.savefig(f"{self.mcmc_dir}/data.png")
+        if self.verbose:
+            print()
+            print(f"mcmc run initialisation complete!")
+            print()
 
     def start_run(self, save=True):
         if self.verbose:
             print(f"Now starting MCMC run")
             print(f'-----------------------------------------')
 
-        chains_fn = f"{self.mcmc_dir}/saved_chains.h5"
-        save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
-        autocorr_check = zeus.callbacks.AutocorrelationCallback(ncheck=100, dact=0.01, nact=50, discard=0.5)
-        R_check = zeus.callbacks.SplitRCallback(ncheck=100, epsilon=0.01, nsplits=2, discard=0.5)
-        miniter_check = zeus.callbacks.MinIterCallback(nmin=500)
+        if not self.dryrun:
+            chains_fn = f"{self.mcmc_dir}/saved_chains.h5"
+            save_progress = zeus.callbacks.SaveProgressCallback(chains_fn, ncheck=100)
+            autocorr_check = zeus.callbacks.AutocorrelationCallback(ncheck=100, dact=0.01, nact=50, discard=0.5)
+            R_check = zeus.callbacks.SplitRCallback(ncheck=100, epsilon=0.01, nsplits=2, discard=0.5)
+            miniter_check = zeus.callbacks.MinIterCallback(nmin=500)
 
         if self.p0 is None:
             _p0 = pass_Planck[:12]
@@ -544,6 +633,7 @@ class MCMC:
             _p0 = self.p0
 
         if self.verbose:
+            print(f"fitting {self.which_params} parameters...")
             print(f"fitting tau prior is {self.addPlanck}...")
             print(f"evaluating likelihood function in vector mode is {self.vectorize}...")
 

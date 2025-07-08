@@ -86,7 +86,7 @@ def main():
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     print(f"Now initialising mcmc run {config['title']}...")
     print()
-    dir = f"{base_dir}/inference/productionruns3"
+    dir = f"{base_dir}/inference/productionruns5"
     print(f"Saving analysis to {dir}...")
     print()
     config['survey'] = args.survey
@@ -110,13 +110,13 @@ def main():
     #=================================================================
     # RUNNING MCMCs
     #=================================================================
-    testing = False
+    testing = True
 
     if testing:
-        config.burnin = 10
-        config.nsteps = 100
+        config.burnin = 500
+        config.nsteps = 2000
 
-    emu = summon_emu(config.emu)
+    emu = summon_emu('v5.1')
     true, emulated = get_spectra(emu, config,
                          dir=config.nndir,
                          base_dir=base_dir)

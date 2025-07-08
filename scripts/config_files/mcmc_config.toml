@@ -1,4 +1,5 @@
 title = 'config'
+mcmc_dir = 'testing'
 
 # # files paths
 # #home_dir = '/home/emc-brid'  # glx
@@ -18,17 +19,16 @@ ion_fn = 'metadata/ion_histories_full.npz'
 redshift_fn = 'metadata/redshift_list.dat'
 
 # data config
-survey = false
+survey = 'CMB-HD'
 lmin = 1500
 lmax = 10000
-addnoise = false
+addnoise = true
 use_data = true
 sn = '12958'
 
 # emulator
-load_emulator = true
 nndir = 'setrandomseed3'
-emu = 'setrandomseed3/emuv5.0_run0'
+emu_version = 'emuv5.0_run0'
 
 # mcmc
 nwalkers = 12
@@ -40,6 +40,6 @@ addPlanck = false
 vectorize = true
 
 # parameters
-which_params_to_fit = ['tau', 'Mmin', 'fesc'] # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
+which_params = ['tau', 'Mmin', 'fesc'] # ['fX', 'rHS', 'tau', 'Mmin', 'fesc']
 Planck = 0.0576 #  0.054
 Planck_err = 0.0060 # 0.007

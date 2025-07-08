@@ -4,6 +4,8 @@ import alfred.surveys as surveys
 import alfred.astrofit
 
 from alfred.parameters import home_dir, base_dir
+from alfred.utils import summon_emu
+from alfred.emulator import kemu
 
 
 telescopes ={
@@ -31,18 +33,24 @@ def noise(ls, telescope, pol=False, is_cl=False):
         nl *= ls*(ls+1.)/2./np.pi
     return nl
 
-def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy'):
-    err = np.load(file)
+def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy', verbose=True):
+    if verbose:
+        print(f"Loading emulator error from {file}...")
+    residuals = np.load(file)
+    err = np.std(residuals, axis=0)
     # ells_emu = alfred.astrofit.ells
     # emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
     # emu_err = 10.0 * np.interp(ells, ells_emu, emu_err)
 
     return err
 
+# print(f"cosmic variance: {surveys.sample_var(mcmc_run.ells, mcmc_run.datapoints, telescopes['CMB-HD'])**2}")
+# print(f"noise: {err[mcmc_run.lmask]**2}")
+# print(f"emu: {surveys.emu_error(ells[indices])[mcmc_run.lmask]}**2")
 
-def error_cov(ells, datapoints, telescope, verbose=False,
+def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
             include_samplevar=True, include_noise=True, include_emulator=True,
-            emuerr_file=f'{base_dir}/emulators/LoReLi_settings/NN_LoReLi_errors.npy'):
+            emuerr_file=f'{base_dir}/emulators/reduced_dataset/emuv5.0_run0/emu_err.npy'):
     delta_ell = np.diff(ells).mean()
     errors = []
 
@@ -57,7 +65,9 @@ def error_cov(ells, datapoints, telescope, verbose=False,
             print(f"noise: {noise}")
         errors.append(noise)
     if include_emulator:
-        emu_err = surveys.emu_error(ells)**2.0
+        emu_err = surveys.emu_error(ells, file=emuerr_file, verbose=verbose)**2.0
+        # emu = summon_emu('v5.0_err')
+        # emu_err = kemu(alfred.astrofit.df.loc[sn].to_numpy(), **emu)
         if verbose:
             print(f"emulator error: {emu_err}")
 

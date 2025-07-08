@@ -86,7 +86,7 @@ def main():
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     print(f"Now initialising mcmc run {config['title']}...")
     print()
-    dir = f"{base_dir}/inference/productionruns_fittingtrue"
+    dir = f"{base_dir}/inference/productionruns_fittingtrue_abovemeantau"
     print(f"Saving analysis to {dir}...")
     print()
     config['survey'] = args.survey
@@ -111,6 +111,10 @@ def main():
     # RUNNING MCMCs
     #=================================================================
     testing = False
+
+
+    config.sn = '11320'
+    # '12730'
 
     if testing:
         config.burnin = 10
@@ -171,9 +175,9 @@ def main():
                         p0=draws(ndraws=config.nwalkers)[:,2:], 
                         emu=emu,
                         datapoints=datapoints,
-                        A=np.random.uniform(.99,1.01, size=config.nwalkers),
-                        Ashape=ratios.mean(axis=0),
-                        Astats=[Amean, Asigma],
+                     #   A=np.random.uniform(.99,1.01, size=config.nwalkers),
+         #               Ashape=ratios.mean(axis=0),
+         #               Astats=[Amean, Asigma],
                 #     dryrun=True,
                     #    showfigs=True,
                         verbose=True)

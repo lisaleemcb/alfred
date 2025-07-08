@@ -466,6 +466,7 @@ class NeuralNetwork(Emulator):
 
         splits = None
         if load_data:
+            print(metadata)
             X_train = metadata['X_train']
             X_test  = metadata['X_test']
             y_train  = metadata['y_train']

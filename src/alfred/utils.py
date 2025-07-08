@@ -189,6 +189,21 @@ def summon_emu(dir, base=f"{base_dir}/emulators", verbose=False):
     
     return emu
 
+def plot_vlines(values, axes, **kwargs):
+    ndim = axes.shape[0]
+    
+    for j in range(ndim):
+        ax = axes[j, j]
+        ax.axvline(values[j], **kwargs)
+
+    # Loop over the histograms
+    for yi in range(ndim):
+        for xi in range(yi):
+            ax = axes[yi, xi]
+            ax.axvline(values[xi], **kwargs)
+            ax.axhline(values[yi], **kwargs)
+            ax.plot(values[xi], **kwargs)
+
 # import matplotlib as m
 # cmap = m.cm.get_cmap('Blues')
 # norm = m.colors.Normalize(vmin=min_chi2-10, vmax=min_chi2+20.)
