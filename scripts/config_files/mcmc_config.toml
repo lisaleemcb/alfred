@@ -28,7 +28,7 @@ sn = '12958'
 
 # emulator
 nndir = 'setrandomseed3'
-emu_version = 'emuv5.0_run0'
+emu_version = 'emuv5.1_run0'
 
 # mcmc
 nwalkers = 12

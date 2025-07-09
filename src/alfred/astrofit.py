@@ -474,7 +474,7 @@ class MCMC:
             print(f"data initialisation complete!")
             print()
 
-    def init_run(self, list_emus=None, savefig=True):
+    def init_run(self, savefig=True):
         if self.verbose:
             print(f'-----------------------------------------')
             print(f"Initialising actual MCMC run")
@@ -487,7 +487,7 @@ class MCMC:
             for key in self.truths:
                  print(f"\t {key}={self.truths[key]}")
         
-        if list_emus:
+        if isinstance(self.emu, list):
             print(f"passed list of emulators...")
             def model(p, A=None, lmask=self.lmask, list_emus=self.emu):
                 if A is None:
@@ -498,7 +498,7 @@ class MCMC:
                 elif p.ndim == 2:
                     return A[:,None] * emulator.mechkemu(p, list_emus)[:, lmask]
 
-        elif not list_emus:
+        elif not isinstance(self.emu, list):
             if self.verbose:
                 print(f"single emulator mode...")
             def model(p, A=None, lmask=self.lmask, emu=self.emu):

@@ -36,8 +36,9 @@ def noise(ls, telescope, pol=False, is_cl=False):
 def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy', verbose=True):
     if verbose:
         print(f"Loading emulator error from {file}...")
-    residuals = np.load(file)
-    err = np.std(residuals, axis=0)
+    # std
+    err = np.load(file)
+    
     # ells_emu = alfred.astrofit.ells
     # emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
     # emu_err = 10.0 * np.interp(ells, ells_emu, emu_err)
