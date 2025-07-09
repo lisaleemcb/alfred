@@ -317,6 +317,7 @@ class MCMC:
                     Ashape=None,
                     Astats=[0.0, .1],
                     emu=None,
+                    emuerr_file=None,
                     priors=priors,
                     priors2d=priors2d,
                     justpriors=False,
@@ -382,6 +383,11 @@ class MCMC:
             if self.verbose:
                 print(f"using emulator version {emu_path}...")
             self.emu = summon_emu(emu_path, verbose=self.verbose)
+
+        if emuerr_file is None:
+            self.emuerr_file = f'{base_dir}/emulators/{self.config.nndir}/{self.config.emu_version}/residuals.npy'
+        else:
+            self.emuerr_file = emuerr_file
        
         self.addnoise = self.config.addnoise
         self.which_params = self.config.which_params
@@ -449,7 +455,7 @@ class MCMC:
         self.err_cov = surveys.error_cov(self.ells,
                                     self.datapoints,
                                     surveys.telescopes[self.telescope],
-                                    emuerr_file=f'{base_dir}/emulators/{self.config.nndir}/{self.config.emu_version}/residuals.npy',
+                                    emuerr_file=self.emuerr_file,
                                     verbose=self.verbose)
         self.err =np.sqrt(np.diag(self.err_cov))
 
