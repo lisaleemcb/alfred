@@ -154,10 +154,16 @@ def main():
 
         ratios_all.append(ratios)
 
-    emu_variances = np.asarray([np.var(res, axis=0) for res in residuals_all])
-    emu_error = np.sqrt(emu_variances.sum(axis=0))
+    residuals_all = np.asarray(residuals_all)
+    print(f"residuals shape is {residuals_all.shape}")
+    emu_error = np.std(residuals_all, axis=1)
+    print(f"emu error : {emu_error.shape}")
+    emu_error = np.mean(emu_error, axis=0)
+
+    print(f"emu error : {emu_error.shape}")
+
     
-    emuerr_file = f"{base_dir}/emulators/{config.nndir}/residuals_{args.version}.npy"
+    emuerr_file = f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
     print(f"emu err: {emu_error.shape}")
     print(f'saving average error file to {emuerr_file}...')
     np.save(emuerr_file, emu_error)
