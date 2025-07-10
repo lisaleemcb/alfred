@@ -65,7 +65,7 @@ def main():
     print(f'Saving to directory {path}...')
     os.makedirs(path)
 
-    sampled_sims = df.sample(n=10).index.to_list()
+    sampled_sims = df.sample(n=100).index.to_list()
 
     fn_sampled = f"{path}/sampled_pvals.npy"
     print(f'Saving sampled parameter values to {fn_sampled}')
