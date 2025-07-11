@@ -636,6 +636,7 @@ class MCMC:
                 ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data truth')
                 ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
                 ax.errorbar(self.ells, self.datapoints, color='gold', marker='.', ls='', yerr=self.err, label='observations')
+                ax.set_ylim(0,1.0)
                 ax.set_xlabel('ell')
                 ax.set_ylabel('Dell')
 

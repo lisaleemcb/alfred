@@ -42,6 +42,7 @@ def main():
     parser.add_argument("--savedir", type=str, help="where to save mcmcs")
     parser.add_argument("--nndir", type=str, help="which emulator runs to use")
     parser.add_argument("--version", type=str, help="which version of emulator")
+    parser.add_argument("--overwrite", type=bool, help="whether or not to skip folders if existing")
     
     # Parse arguments
     args = parser.parse_args()
@@ -182,6 +183,11 @@ def main():
             datapoints += noise
 
         config.addnoise = False
+
+        if not args.overwrite:
+             if os.path.exists(f"{config.savedir}/{config.title}"):
+                  print(f"Skipping run for {config.title}. Already exists and overwrite is {args.overwrite}")
+                  continue
 
         mcmc_run = MCMC(config,
                         ells=ells[indices],
