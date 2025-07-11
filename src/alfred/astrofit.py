@@ -306,6 +306,39 @@ def gelman_rubin_rhat(chains):
 
     return rhat
 
+def plot_vlines(values, axes, **kwargs):
+    ndim = axes.shape[0]
+    
+    for j in range(ndim):
+        ax = axes[j, j]
+        ax.axvline(values[j], **kwargs)
+
+    # Loop over the histograms
+    for yi in range(ndim):
+        for xi in range(yi):
+            ax = axes[yi, xi]
+            ax.axvline(values[xi], **kwargs)
+            ax.axhline(values[yi], **kwargs)
+            ax.plot(values[xi], **kwargs)
+
+
+def make_tauchains(mechachain, A=True, dropA=True, truths=None):
+    stop = 4
+    if A is False:
+        stop = 3
+    taus = whatthetau(fill(mechachain[:,:stop], truths, df.columns[2:]))
+
+    if A:
+        if dropA:
+            mechachain = np.concatenate([mechachain[:,:-1], taus[:,None]], axis=1)
+
+        elif not dropA:
+            mechachain = np.concatenate([mechachain, taus[:,None]], axis=1)
+    elif not A:
+        mechachain = np.concatenate([mechachain, taus[:,None]], axis=1)
+
+    return mechachain
+
 class MCMC:
     def __init__(self,
                     config,
