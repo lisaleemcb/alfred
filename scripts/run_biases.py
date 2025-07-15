@@ -74,8 +74,8 @@ def main():
      #=================================================================
     # RUNNING MCMC
     #=================================================================
-    config.burnin = 100
-    config.nsteps = 2000
+    config.burnin = 1000
+    config.nsteps = 5000
     config.nndir = args.nndir
 
     mob = []
