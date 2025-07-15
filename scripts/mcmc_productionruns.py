@@ -161,6 +161,7 @@ def main():
                             Astats=[np.mean(ratios), np.std(ratios)],
                         # dryrun=True,
                         # showfigs=True,
+                            Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
                             verbose=True,
                             debug=False)
 
