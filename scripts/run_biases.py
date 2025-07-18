@@ -81,7 +81,7 @@ def main():
     mob = []
     ratios_all = []
 
-    for n in range(5):
+    for n in range(10):
         print(f"Now on run {n}...")
         # if n != 0:
         #     continue
@@ -90,15 +90,28 @@ def main():
 
         mob.append(emu)
 
-        path_ratios = f'{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy'
-        ratios = np.load(path_ratios)
-        ratios_all.append(ratios)
+        # path_ratios = f'{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy'
+        # ratios = np.load(path_ratios)
+        # ratios_all.append(ratios)
+    residuals = []
+    ratios = []
+
+    for sn in df_validation.index:
+        tspec = utils.spectra(sn)[indices]
+        espec = emulator.mechakemu(df.loc[sn].to_numpy(), mob)
+
+        residuals.append(tspec - espec)
+        ratios.append(tspec / espec)
+
+    residuals = np.asarray(residuals)
+    ratios = np.asarray(ratios)
 
     emuerr_file = f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
+    np.save(emuerr_files, np.std(residuals, axis=1))
     ratios_all = np.asarray(ratios_all)
-    Amean = np.mean(ratios_all)
-    Asigma = np.std(ratios_all)
-    Ashape = np.mean(np.mean(ratios_all,axis=0), axis=0)
+    Amean = np.mean(ratios)
+    Asigma = np.std(ratios)
+    Ashape = np.mean(ratios, axis=1)
 
     for sn in sampled_sims:
         config.title = f"bias_simu{sn}"
