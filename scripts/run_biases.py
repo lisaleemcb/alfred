@@ -96,6 +96,7 @@ def main():
     residuals = []
     ratios = []
 
+    print('running through sims...')
     for sn in df_validation.index:
         tspec = utils.spectra(sn)[indices]
         espec = emulator.mechkemu(df.loc[sn].to_numpy(), mob)
@@ -107,7 +108,7 @@ def main():
     ratios = np.asarray(ratios)
 
     emuerr_file = f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
-    np.save(emuerr_files, np.std(residuals, axis=1))
+    np.save(emuerr_file, np.std(residuals, axis=1))
     ratios_all = np.asarray(ratios_all)
     Amean = np.mean(ratios)
     Asigma = np.std(ratios)
