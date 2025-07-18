@@ -60,7 +60,7 @@ def main():
 
     if args.survey:
         config.survey = args.survey
-    config.savedir = f"biases/{args.savedir}"
+    config.savedir = f"biases_randomseed5/{args.savedir}"
     path = f"{base_dir}/inference/{config.savedir}"
     print(f'Saving to directory {path}...')
     os.makedirs(path)
