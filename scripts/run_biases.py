@@ -98,7 +98,7 @@ def main():
 
     for sn in df_validation.index:
         tspec = utils.spectra(sn)[indices]
-        espec = emulator.mechakemu(df.loc[sn].to_numpy(), mob)
+        espec = emulator.mechkemu(df.loc[sn].to_numpy(), mob)
 
         residuals.append(tspec - espec)
         ratios.append(tspec / espec)
