@@ -108,11 +108,11 @@ def main():
     ratios = np.asarray(ratios)
 
     emuerr_file = f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
-    np.save(emuerr_file, np.std(residuals, axis=1))
+    np.save(emuerr_file, np.std(residuals, axis=0))
     ratios_all = np.asarray(ratios_all)
     Amean = np.mean(ratios)
     Asigma = np.std(ratios)
-    Ashape = np.mean(ratios, axis=1)
+    Ashape = np.mean(ratios, axis=0)
 
     for sn in sampled_sims:
         config.title = f"bias_simu{sn}"

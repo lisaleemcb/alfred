@@ -103,7 +103,7 @@ def main():
     residuals_all = []
     ratios_all = []
 
-    for n in range(5):
+    for n in range(10):
         print(f"Now on run {n}...")
         # if n != 0:
         #     continue
