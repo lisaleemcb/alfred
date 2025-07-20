@@ -44,6 +44,7 @@ def main():
     parser.add_argument("--savedir", type=str, help="where to save mcmcs")
     parser.add_argument("--nndir", type=str, help="which emulator runs to use")
     parser.add_argument("--version", type=str, help="which version of emulator")
+    parser.add_argument("--overwrite", type=str, help="whether to enforce no overwriting")
     
     # Parse arguments
     args = parser.parse_args()
@@ -63,7 +64,8 @@ def main():
     config.savedir = f"biases_randomseed5/{args.savedir}"
     path = f"{base_dir}/inference/{config.savedir}"
     print(f'Saving to directory {path}...')
-    os.makedirs(path)
+    if args.overwrite:
+        os.makedirs(path)
 
     sampled_sims = df.sample(n=100).index.to_list()
 
