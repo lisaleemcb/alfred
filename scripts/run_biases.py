@@ -61,7 +61,7 @@ def main():
 
     if args.survey:
         config.survey = args.survey
-    config.savedir = f"biases_randomseed5/{args.savedir}"
+    config.savedir = f"biases/{args.savedir}"
     path = f"{base_dir}/inference/{config.savedir}"
     print(f'Saving to directory {path}...')
     if args.overwrite:
@@ -83,7 +83,7 @@ def main():
     mob = []
     ratios_all = []
 
-    for n in range(10):
+    for n in range(5):
         print(f"Now on run {n}...")
         # if n != 0:
         #     continue
