@@ -354,6 +354,8 @@ class MCMC:
                     priors=priors,
                     priors2d=priors2d,
                     justpriors=False,
+                    fit_hksz=False,
+                    add_fg_residuals=False,
                     Planck=Planck,
                     Planck_err=Planck_err,
                     base_dir=base_dir,
@@ -432,6 +434,8 @@ class MCMC:
             self.priors2d = None
         self.addPlanck = self.config.addPlanck
         self.justpriors = justpriors
+        self.add_fg_residuals = add_fg_residuals
+        self.fit_hksz = fit_hksz
         if self.addPlanck:
             self.Planck = Planck
             self.Planck_err = Planck_err
@@ -443,7 +447,7 @@ class MCMC:
         self.nwalkers = self.config.nwalkers
         self.burnin = self.config.burnin
         self.nsteps = self.config.nsteps
-        self.ndim = len(self.which_params) + int(np.any(self.A is not None))
+        self.ndim = len(self.which_params) + int(np.any(self.A is not None)) + int(self.fit_hksz)
         self.rescale_cov = self.config.rescale_cov
 
         if self.verbose:
@@ -470,20 +474,31 @@ class MCMC:
             elif self.config.use_data is False:
                 if self.verbose:
                     print('using emulated kSZ spectrum for datapoints...')
-                self.datapoints = emulator.kemu(self.theta_true, **self.emu)
+                self.datapoints = emulator.mechkemu(self.theta_true, self.emu)
+                print(f"first datapoints: {self.datapoints}")
         else:
             if self.verbose:
                 print('Using input data for datapoints')
+
+
+        if self.fit_hksz:
+            if self.verbose:
+                print(f"fitting homogeneous kSZ spectrum...")
+            hksz = np.genfromtxt(f"{base_dir}/metadata/dl_ksz_hom_AG.dat").T
+            self.hksz = np.interp(self.ells, hksz[0], hksz[1])
+            self.datapoints += self.hksz
 
         if self.Ashape is None:
             self.Ashape = np.ones_like(self.datapoints)
         elif self.A is not None:
             self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
+        if self.fit_hksz:
+            A_hksz_p0 = np.random.uniform(.99,1.01, size=self.nwalkers)
+            self.p0 = np.concatenate([self.p0, A_hksz_p0[:,None]], axis=1)
 
             if self.verbose:
                 print(f"running with nuisance parameter, A, with Gaussian priors:")
                 print(f"A mean, sigma: {self.Astats}")
-
 
         self.err_cov = surveys.error_cov(self.ells,
                                     self.datapoints,
@@ -491,6 +506,12 @@ class MCMC:
                                     emuerr_file=self.emuerr_file,
                                     verbose=self.verbose)
         self.err =np.sqrt(np.diag(self.err_cov))
+        if self.add_fg_residuals:
+            if self.verbose:
+                print(f"adding fg residuals...")
+            fg_residuals = np.genfromtxt(f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt").T
+            self.fg_residuals = np.interp(self.ells, fg_residuals[0], fg_residuals[1])
+            self.err += self.fg_residuals
 
         if self.addnoise:
             if self.verbose:
@@ -522,33 +543,41 @@ class MCMC:
         
         if isinstance(self.emu, list):
             print(f"passed list of emulators...")
-            def model(p, A=None, lmask=self.lmask, list_emus=self.emu):
+            def model(p, A=None, A_hksz=None, lmask=self.lmask, list_emus=self.emu):
                 if A is None:
                     A = np.array([1])
+                if A_hksz is None:
+                    A_hksz = np.array([1])
 
                 if p.ndim == 1:
-                    return A * emulator.mechkemu(p, list_emus)[lmask]
+                    hksz = A_hksz * self.hksz[lmask]
+                    pksz = (A / self.Ashape[lmask]) * emulator.mechkemu(p, self.emu)[lmask]
+
+                    return hksz + pksz
+        
                 elif p.ndim == 2:
-                    return A[:,None] * emulator.mechkemu(p, list_emus)[:, lmask]
+                    hksz = A_hksz[:,None] * self.hksz[lmask]
+                    pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.mechkemu(p, self.emu)[:,lmask]
+                    return hksz + pksz
 
         elif not isinstance(self.emu, list):
             if self.verbose:
                 print(f"single emulator mode...")
-            def model(p, A=None, lmask=self.lmask, emu=self.emu):
+            def model(p, A=None, A_hksz=None, lmask=self.lmask, emu=self.emu):
                 if A is None:
                     A = np.array([1])
+                if A_hksz is None:
+                    A_hksz = np.array([1])
 
-                #     mp = p
-                # elif self.A is not None:
-                #     A = p[-1]
-                #     mp = p[:-1] 
-
-         #       print(f"Inside model A={A}")
                 if p.ndim == 1:
-                    return (A / self.Ashape[lmask]) * emulator.kemu(p, **emu)[lmask]
+                    hksz = A_hksz * self.hksz[lmask]
+                    pksz = (A / self.Ashape[lmask]) * emulator.kemu(p, **emu)[lmask]
+                    return hksz + pksz
                 elif p.ndim == 2:
-                    return (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, **emu)[:,lmask]
-            
+                    hksz = A_hksz[:,None] * self.hksz[lmask]
+                    pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, **emu)[:,lmask]
+                    return hksz + pksz
+
         self.model = model
         if not self.dryrun:
             if self.verbose:
@@ -567,10 +596,14 @@ class MCMC:
 
         def lnprob_prepped(params):
             if np.any(self.A is not None):
-                model_params = params[:,:-1]
-                self.A = params[:,-1] 
+                model_params = params[:,:len(self.which_params)]
+                self.A = params[:,len(self.which_params)] 
                 self.Amean = self.Astats[0] * np.ones_like(self.A)
                 self.Asigma = self.Astats[1] * np.ones_like(self.A)
+
+            self.A_hksz = None
+            if self.fit_hksz:
+                self.A_hksz = params[:,len(self.which_params)+1]
 
                 passA = -.5 * (self.A - self.Amean)**2.0 / self.Asigma**2.0
                 # print(f"model_params: {model_params}")
@@ -584,10 +617,10 @@ class MCMC:
                 passA = None
 
                 if self.debug:
-                    print(f"pass A= {passA} because not fitting A")
+                    print(f"pass A={passA} because not fitting A")
 
-            return lnprob(model_params, lambda p: self.model(p, A=self.A), self.datapoints,
-                        self.err, self.truths, self.priors, Aprior=passA,
+            return lnprob(model_params, lambda p: self.model(p, A=self.A, A_hksz=self.A_hksz),
+                        self.datapoints, self.err, self.truths, self.priors, Aprior=passA,
                         which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
                         justpriors=self.justpriors,
                         Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
@@ -622,7 +655,9 @@ class MCMC:
             true_params = np.asarray(list(self.truths.values()))[2:]
             if np.any(self.A):
                 true_params = np.asarray([*true_params, 1.0])
-                true_params = true_params[None,:]
+            if self.fit_hksz:
+                true_params = np.asarray([*true_params, 1.0])
+            true_params = true_params[None,:]
 
             print(f"The value of the likelihood for the true params is: {self.lnprob_prepped(true_params)[0]}")
 
@@ -636,7 +671,7 @@ class MCMC:
                 ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data truth')
                 ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
                 ax.errorbar(self.ells, self.datapoints, color='gold', marker='.', ls='', yerr=self.err, label='observations')
-                ax.set_ylim(0,1.0)
+                # ax.set_ylim(0,1.0)
                 ax.set_xlabel('ell')
                 ax.set_ylabel('Dell')
 
@@ -671,6 +706,7 @@ class MCMC:
                 
         elif self.p0 is not None:
             _p0 = self.p0
+            print(f"p0 shape: {_p0.shape}")
 
         if self.verbose:
             print(f"fitting {self.which_params} parameters...")

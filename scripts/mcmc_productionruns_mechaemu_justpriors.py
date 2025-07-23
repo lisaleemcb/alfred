@@ -174,7 +174,7 @@ def main():
     Asigma = np.std(ratios_all)
     Ashape = np.mean(np.mean(ratios_all,axis=0), axis=0)
 
-    for i, setup in enumerate(setups):
+    for i, setup in enumerate(setups[:2]):
         for key in setup.keys():
                     print(f"{key} = {setup[key]}")
                     setattr(config, key, setup[key])
