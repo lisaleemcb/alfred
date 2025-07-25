@@ -48,7 +48,7 @@ def main():
     config = SimpleNamespace(**config)
     print(f"Now initialising mcmc run from config file {config.title}...")
 
-    config.savedir = f"test_hksz/{config.survey}"
+    config.savedir = f"test_hksz2/{config.survey}"
 
 
     datapoints = utils.spectra(config.sn)[indices]
