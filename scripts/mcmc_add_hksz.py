@@ -168,7 +168,7 @@ def main():
                     A=np.random.uniform(.99,1.01, size=config.nwalkers),
                     Ashape=Ashape,
                     Astats=[Amean, Asigma],
-                    dryrun=True,
+                    dryrun=False,
                     showfigs=True,
                     Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
                     verbose=True,
