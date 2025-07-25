@@ -29,7 +29,11 @@ from alfred.parameters import *
 
 tf.config.set_visible_devices([], 'GPU')
 
-def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
+def kemu_inner(params, emulator_dict, log_data=True):
+    scalerX = emulator_dict['scalerX']
+    scalerY = emulator_dict['scalerY']
+    model = emulator_dict['model']
+
     if params.ndim == 2:
         X = scalerX.transform(params)
 
@@ -47,16 +51,20 @@ def kemu(params, scalerX=None, scalerY=None, model=None, log_data=True):
 
     return Y
 
-def mechkemu(params, emus, log_data=True):
-    spectra = []
+def kemu(params, emulator, log_data=True):
+    if isinstance(emulator, list):
+        spectra = []
+        for emu in emulator:
+            s = kemu_inner(params, emu, log_data=log_data)
+            spectra.append(s)
 
-    for emu in emus:
-        s = kemu(params, **emu, log_data=log_data)
-        spectra.append(s)
+        spectra = np.asarray(spectra)
 
-    spectra = np.asarray(spectra)
+        return spectra.mean(axis=0)
 
-    return spectra.mean(axis=0)
+    elif not isinstance(emulator, list):
+        return kemu_inner(params, emulator, log_data=log_data)
+
 
 @register_keras_serializable(package="Custom")
 class WeightedMSELoss(keras.losses.Loss):

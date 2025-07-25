@@ -355,6 +355,7 @@ class MCMC:
                     priors2d=priors2d,
                     justpriors=False,
                     fit_hksz=False,
+                    A_hksz=2.5, # muK^2
                     add_fg_residuals=False,
                     Planck=Planck,
                     Planck_err=Planck_err,
@@ -408,6 +409,7 @@ class MCMC:
         self.A = A
         self.Astats = Astats
         self.Ashape = Ashape
+        self.A_hksz = A_hksz
         
         if emu is not None:
             if self.verbose:
@@ -486,7 +488,7 @@ class MCMC:
                 print(f"fitting homogeneous kSZ spectrum...")
             hksz = np.genfromtxt(f"{base_dir}/metadata/dl_ksz_hom_AG.dat").T
             self.hksz = np.interp(self.ells, hksz[0], hksz[1])
-            self.datapoints += self.hksz
+            self.datapoints += self.A_hksz * self.hksz
         elif not self.fit_hksz:
             self.hksz = np.zeros_like(self.datapoints)
 
@@ -495,7 +497,7 @@ class MCMC:
         elif self.A is not None:
             self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
         if self.fit_hksz:
-            A_hksz_p0 = np.random.uniform(.99,1.01, size=self.nwalkers)
+            A_hksz_p0 = self.A_hksz * np.random.uniform(.99,1.01, size=self.nwalkers)
             self.p0 = np.concatenate([self.p0, A_hksz_p0[:,None]], axis=1)
 
             if self.verbose:
@@ -544,42 +546,30 @@ class MCMC:
                  print(f"\t {key}={self.truths[key]}")
         
         if isinstance(self.emu, list):
-            print(f"passed list of emulators...")
-            def model(p, A=None, A_hksz=None, lmask=self.lmask, list_emus=self.emu):
-                if A is None:
-                    A = np.array([1])
-                if A_hksz is None:
-                    A_hksz = np.array([1])
-
-                if p.ndim == 1:
-                    hksz = A_hksz * self.hksz[lmask]
-                    pksz = (A / self.Ashape[lmask]) * emulator.mechkemu(p, self.emu)[lmask]
-
-                    return hksz + pksz
-        
-                elif p.ndim == 2:
-                    hksz = A_hksz[:,None] * self.hksz[lmask]
-                    pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.mechkemu(p, self.emu)[:,lmask]
-
-                    return hksz + pksz
+            if self.verbose:
+                print(f"passed list of emulators...")
 
         elif not isinstance(self.emu, list):
             if self.verbose:
                 print(f"single emulator mode...")
-            def model(p, A=None, A_hksz=None, lmask=self.lmask, emu=self.emu):
-                if A is None:
-                    A = np.array([1])
-                if A_hksz is None:
-                    A_hksz = np.array([1])
 
-                if p.ndim == 1:
-                    hksz = A_hksz * self.hksz[lmask]
-                    pksz = (A / self.Ashape[lmask]) * emulator.kemu(p, **emu)[lmask]
-                    return hksz + pksz
-                elif p.ndim == 2:
-                    hksz = A_hksz[:,None] * self.hksz[lmask]
-                    pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, **emu)[:,lmask]
-                    return hksz + pksz
+        def model(p, A=None, A_hksz=self.A_hksz, lmask=self.lmask, emu=self.emu):
+            if A is None:
+                A = np.array([1])
+            if not self.fit_hksz:
+                A_hksz = np.array([0])
+
+            if p.ndim == 1:
+                hksz = A_hksz * self.hksz[lmask]
+                pksz = (A / self.Ashape[lmask]) * emulator.kemu(p, self.emu)[lmask]
+
+                return hksz + pksz
+    
+            elif p.ndim == 2:
+                hksz = A_hksz[:,None] * self.hksz[lmask]
+                pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, self.emu)[:,lmask]
+
+                return hksz + pksz
 
         self.model = model
         if not self.dryrun:
@@ -595,7 +585,6 @@ class MCMC:
                         err=self.err,
                         Ashape=self.Ashape,
                         Astats=self.Astats)
-
 
         def lnprob_prepped(params):
             if np.any(self.A is not None):
@@ -619,7 +608,7 @@ class MCMC:
                     print(f"pass A={passA} because not fitting A")
 
             
-            self.A_hksz = None
+            self.A_hksz = np.array([0.0])
             if self.fit_hksz:
                 self.A_hksz = params[:,len(self.which_params)+1]
 
@@ -647,8 +636,8 @@ class MCMC:
                 model_params = params
                 passA = None
 
-            return chi2_contribution(model_params, lambda p: self.model(p, A=self.A), self.datapoints,
-                        self.priors, self.err, truths=self.truths,
+            return chi2_contribution(model_params, lambda p: self.model(p, A=self.A, A_hksz=self.A_hksz),
+                        self.datapoints, self.priors, self.err, truths=self.truths,
                         which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
                         Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
                         vectorize=self.vectorize, debug=False)
@@ -657,11 +646,11 @@ class MCMC:
         self.chi2_ell = chi2_ell
         
         if self.verbose:
-            true_params = np.asarray(list(self.truths.values()))[2:]
+            true_params = np.asarray(list(self.truths.values()))[2:] # HARD-CODED BEWARE!!!
             if np.any(self.A):
-                true_params = np.asarray([*true_params, 1.0])
+                true_params = np.asarray([*true_params, self.Astats[0]])
             if self.fit_hksz:
-                true_params = np.asarray([*true_params, 1.0])
+                true_params = np.asarray([*true_params, self.A_hksz])
             true_params = true_params[None,:]
 
             print(f"The value of the likelihood for the true params is: {self.lnprob_prepped(true_params)[0]}")
@@ -674,7 +663,7 @@ class MCMC:
             if self.showfigs or savefig:
                 fig, ax = plt.subplots()
                 ax.plot(self.ells, self.datapoints, color='green', alpha=.3, label='data truth')
-                ax.plot(self.ells, self.model(self.theta_true, A=None), label='model truth', color='deeppink')
+                ax.plot(self.ells, self.model(self.theta_true), label='model truth', color='deeppink')
                 ax.errorbar(self.ells, self.datapoints, color='gold', marker='.', ls='', yerr=self.err, label='observations')
                 # ax.set_ylim(0,1.0)
                 ax.set_xlabel('ell')
