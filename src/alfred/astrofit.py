@@ -487,6 +487,8 @@ class MCMC:
             hksz = np.genfromtxt(f"{base_dir}/metadata/dl_ksz_hom_AG.dat").T
             self.hksz = np.interp(self.ells, hksz[0], hksz[1])
             self.datapoints += self.hksz
+        elif not self.fit_hksz:
+            self.hksz = np.zeros_like(self.datapoints)
 
         if self.Ashape is None:
             self.Ashape = np.ones_like(self.datapoints)
@@ -558,6 +560,7 @@ class MCMC:
                 elif p.ndim == 2:
                     hksz = A_hksz[:,None] * self.hksz[lmask]
                     pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.mechkemu(p, self.emu)[:,lmask]
+
                     return hksz + pksz
 
         elif not isinstance(self.emu, list):
@@ -601,10 +604,6 @@ class MCMC:
                 self.Amean = self.Astats[0] * np.ones_like(self.A)
                 self.Asigma = self.Astats[1] * np.ones_like(self.A)
 
-            self.A_hksz = None
-            if self.fit_hksz:
-                self.A_hksz = params[:,len(self.which_params)+1]
-
                 passA = -.5 * (self.A - self.Amean)**2.0 / self.Asigma**2.0
                 # print(f"model_params: {model_params}")
                 # print(f"resetting A to  A={self.A}")
@@ -618,6 +617,12 @@ class MCMC:
 
                 if self.debug:
                     print(f"pass A={passA} because not fitting A")
+
+            
+            self.A_hksz = None
+            if self.fit_hksz:
+                self.A_hksz = params[:,len(self.which_params)+1]
+
 
             return lnprob(model_params, lambda p: self.model(p, A=self.A, A_hksz=self.A_hksz),
                         self.datapoints, self.err, self.truths, self.priors, Aprior=passA,

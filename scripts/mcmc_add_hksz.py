@@ -48,7 +48,7 @@ def main():
     config = SimpleNamespace(**config)
     print(f"Now initialising mcmc run from config file {config.title}...")
 
-    config.savedir = f"test_hksz/{config.survey}"
+    config.savedir = f"test_hksz_withhksz/{config.survey}"
 
 
     datapoints = utils.spectra(config.sn)[indices]
@@ -175,27 +175,6 @@ def main():
                     debug=False)
 
     mcmc_run.init_data()
-    hksz_err = cp.deepcopy(mcmc_run.err)
-
-    mcmc_run = MCMC(config,
-                ells=ells[indices],
-                p0=draws(ndraws=config.nwalkers)[:,2:], 
-                emu=mob,
-                emuerr_file=emuerr_file,
-        #       datapoints=datapoints,
-                fit_hksz=False,
-                add_fg_residuals=False,
-                A=np.random.uniform(.99,1.01, size=config.nwalkers),
-                Ashape=Ashape,
-                Astats=[Amean, Asigma],
-                dryrun=False,
-                showfigs=True,
-                Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
-                verbose=True,
-                debug=False)
-
-    mcmc_run.init_data()
-    mcmc_run.err = hksz_err
     mcmc_run.init_run(savefig=True)
     sampler = mcmc_run.start_run(save=True)
 
