@@ -495,6 +495,7 @@ class MCMC:
         if self.Ashape is None:
             self.Ashape = np.ones_like(self.datapoints)
         elif self.A is not None:
+            print(f"A : {self.A}")
             self.p0 = np.concatenate([self.p0, self.A[:,None]], axis=1)
         if self.fit_hksz:
             A_hksz_p0 = self.A_hksz * np.random.uniform(.99,1.01, size=self.nwalkers)
@@ -508,6 +509,10 @@ class MCMC:
                                     self.datapoints,
                                     surveys.telescopes[self.telescope],
                                     emuerr_file=self.emuerr_file,
+                                    include_samplevar=True,
+                                    include_noise=True,
+                                    include_emulator=True,
+                                    include_fgresiduals=self.add_fg_residuals,
                                     verbose=self.verbose)
         self.err =np.sqrt(np.diag(self.err_cov))
         if self.add_fg_residuals:
