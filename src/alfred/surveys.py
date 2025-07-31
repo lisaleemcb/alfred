@@ -15,10 +15,13 @@ telescopes ={
     'CMB-HD': {'fsky':0.6, 'fwhm':0.42, 'noise':0.7},
 }
 
-def sample_var(ls, dl, telescope, bin_width=100):
-    if np.shape(ls) != np.shape(dl):
-        raise ValueError('ls and dl must have the same shape.')
-    dDl = dl * np.sqrt(2./telescope['fsky']/(2.*ls+1.))
+def modes(ells, telescope):
+    return np.sqrt(2./telescope['fsky']/(2.*ells+1.))
+
+def sample_var(ells, Dl, telescope):
+    if np.shape(ells) != np.shape(Dl):
+        raise ValueError('ekls and Dl must have the same shape.')
+    dDl = Dl * modes(ells, telescope)
     return dDl
 
 
@@ -50,30 +53,46 @@ def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy'
 # print(f"emu: {surveys.emu_error(ells[indices])[mcmc_run.lmask]}**2")
 
 def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
-            include_samplevar=True, include_noise=True, include_emulator=True,
-            emuerr_file=f'{base_dir}/emulators/reduced_dataset/emuv5.0_run0/emu_err.npy'):
-    delta_ell = np.diff(ells).mean()
+            include_samplevar=False, include_noise=False,
+            include_emulator=False, include_fgresiduals=False,
+            emuerr_file=f"{base_dir}/emulators/reduced_dataset/emuv5.0_run0/emu_err.npy",
+            fgres_file=f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt"):
+
+    delta_ell = ells[1:] - ells[:-1]
+    delta_ell = [*delta_ell, delta_ell[-1]] # assumes the last bin is same as second to last
     errors = []
 
+    sigma_CV = np.zeros_like(datapoints)
     if include_samplevar:
-        sample_var = surveys.sample_var(ells, datapoints, telescope)**2.0
+        sigma_CV += surveys.sample_var(ells, datapoints, telescope)
         if verbose:
             print(f"sample variance: {sample_var}")
-        errors.append(sample_var)
+
+    sigma_noise = np.zeros_like(datapoints)
     if include_noise:
-        noise = (surveys.noise(ells, telescope, pol=False)/np.sqrt(delta_ell))**2.0
+        sigma_noise += (modes(ells, telescope) * surveys.noise(ells, telescope, pol=False)) / np.sqrt(delta_ell)
         if verbose:
             print(f"noise: {noise}")
-        errors.append(noise)
+
+    sigma_residuals = np.zeros_like(datapoints)
+    if include_fgresiduals:
+        fg_residuals = np.genfromtxt(fgres_file).T
+        sigma_residuals+= (modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])) / np.sqrt(delta_ell)
+
+        if verbose:   
+            print(f"foreground residuals: {sigma_residuals}")
+
+    errors.append((sigma_CV + sigma_noise + sigma_residuals)**2.0)
+
     if include_emulator:
-        emu_err = surveys.emu_error(ells, file=emuerr_file, verbose=verbose)**2.0
+        var_emu = surveys.emu_error(ells, file=emuerr_file, verbose=verbose)**2.0
         # emu = summon_emu('v5.0_err')
         # emu_err = kemu(alfred.astrofit.df.loc[sn].to_numpy(), **emu)
         if verbose:
-            print(f"emulator error: {emu_err}")
+            print(f"emulator error: {var_emu}")
 
-        errors.append(emu_err)
-
+        errors.append(var_emu)
+    
     errors = np.sum(errors, axis=0)
 
     return np.diag(errors)

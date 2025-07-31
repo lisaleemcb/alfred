@@ -36,7 +36,7 @@ astro_labels = ['Xray_Lfunc', 'hard_Xray_fraction',
                 'gasconversion_timescale', 'log10_Mmin', 'ion_escapefrac_post']
 
 astro_pnames = ['L_X', 'f_X', 'tau', 'Mmin', 'f_esc']
-astro_pnames_formatted = [r'$L_X$', r'$f_X$', r'$\tau$', r'$M_{{\mathrm{min}}}$', r'$f_{{\mathrm{esc}}}$']
+astro_pnames_formatted = [r'$L_X$', r'$f_X$', r'$\tau_{{\mathrm{SF}}}$', r'$M_{{\mathrm{min}}}$', r'$f_{{\mathrm{esc}}}$']
 
 astro_labels_formatted = [
  'Xray \n Lfunc',
