@@ -66,13 +66,13 @@ def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
     if include_samplevar:
         sigma_CV += surveys.sample_var(ells, datapoints, telescope)
         if verbose:
-            print(f"sample variance: {sample_var}")
+            print(f"sample variance: {sigma_CV}")
 
     sigma_noise = np.zeros_like(datapoints)
     if include_noise:
         sigma_noise += (modes(ells, telescope) * surveys.noise(ells, telescope, pol=False)) / np.sqrt(delta_ell)
         if verbose:
-            print(f"noise: {noise}")
+            print(f"noise: {sigma_noise}")
 
     sigma_residuals = np.zeros_like(datapoints)
     if include_fgresiduals:

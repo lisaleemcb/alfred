@@ -515,13 +515,7 @@ class MCMC:
                                     include_fgresiduals=self.add_fg_residuals,
                                     verbose=self.verbose)
         self.err =np.sqrt(np.diag(self.err_cov))
-        if self.add_fg_residuals:
-            if self.verbose:
-                print(f"adding fg residuals...")
-            fg_residuals = np.genfromtxt(f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt").T
-            self.fg_residuals = np.interp(self.ells, fg_residuals[0], fg_residuals[1])
-            self.err += self.fg_residuals
-
+        
         if self.addnoise:
             if self.verbose:
                 print(f"adding noise to simulated data assuming {self.telescope} specifications...")

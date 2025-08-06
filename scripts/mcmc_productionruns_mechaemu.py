@@ -194,7 +194,7 @@ def main():
                         p0=draws(ndraws=config.nwalkers)[:,2:], 
                         emu=mob,
                         emuerr_file=emuerr_file,
-                        datapoints=datapoints,
+                        datapoints=cp.deepcopy(datapoints),
                         A=np.random.uniform(.99,1.01, size=config.nwalkers),
                         Ashape=Ashape,
                         Astats=[Amean, Asigma],

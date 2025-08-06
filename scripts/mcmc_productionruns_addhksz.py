@@ -179,6 +179,7 @@ def main():
                     print(f"{key} = {setup[key]}")
                     setattr(config, key, setup[key])
 
+        datapoints = cp.deepcopy(utils.spectra(config.sn)[indices])
         if config.addnoise:
             datapoints += noise
 
@@ -194,7 +195,7 @@ def main():
                         p0=draws(ndraws=config.nwalkers)[:,2:], 
                         emu=mob,
                         emuerr_file=emuerr_file,
-                        datapoints=datapoints,
+                        datapoints=cp.deepcopy(datapoints),
                         A=np.random.uniform(.99,1.01, size=config.nwalkers),
                         Ashape=Ashape,
                         Astats=[Amean, Asigma],
