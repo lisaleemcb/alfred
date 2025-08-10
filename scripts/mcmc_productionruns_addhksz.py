@@ -204,7 +204,7 @@ def main():
                         add_fg_residuals=True,
                     # dryrun=True,
                     # showfigs=True,
-                    # Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
+                        Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
                         verbose=True,
                         debug=False)
 
