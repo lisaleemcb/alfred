@@ -80,7 +80,7 @@ def whatthetau(params):
     return tau
 
 def addtau2chains(chain, truths, which_params):
-    whatthetau(fill(chain, truths, df.columns[2:]))
+    whatthetau(fill(chain, truths, which_params))
 
     return chain
 
@@ -515,7 +515,7 @@ class MCMC:
                                     include_fgresiduals=self.add_fg_residuals,
                                     verbose=self.verbose)
         self.err =np.sqrt(np.diag(self.err_cov))
-        
+
         if self.addnoise:
             if self.verbose:
                 print(f"adding noise to simulated data assuming {self.telescope} specifications...")

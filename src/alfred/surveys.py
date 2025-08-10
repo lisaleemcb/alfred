@@ -64,7 +64,7 @@ def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
 
     sigma_CV = np.zeros_like(datapoints)
     if include_samplevar:
-        sigma_CV += surveys.sample_var(ells, datapoints, telescope)
+        sigma_CV += surveys.sample_var(ells, datapoints, telescope) / np.sqrt(delta_ell)
         if verbose:
             print(f"sample variance: {sigma_CV}")
 
