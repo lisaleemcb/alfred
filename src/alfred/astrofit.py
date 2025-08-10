@@ -226,6 +226,7 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
 
     if np.any(np.isnan(lp + ln)):
         print(f"Guess values {theta} are causing a NaN!")
+        return -np.inf
     if justpriors:
         return lp
     return lp + ln #, model3
