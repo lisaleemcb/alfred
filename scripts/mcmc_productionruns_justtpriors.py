@@ -44,7 +44,7 @@ def get_spectra(emu, config, dir='setrandomseed3', base_dir=base_dir):
     for si, sn in enumerate(validation_sims):
         truspec = utils.spectra(sn)[indices]
         emuspec = emulator.kemu(df.loc[sn].to_numpy(), **emu)
-        
+
         true[si] = truspec
         emulated[si] = emuspec
 
@@ -72,10 +72,10 @@ def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="sets what experiment to use.")
     parser.add_argument("--survey", type=str, help="which survey to use")
-    
+
     # Parse arguments
     args = parser.parse_args()
-    
+    print("HEREEEEE")
     print('reading in database...')
     sims = utils.get_sims('nells30_v5', base_dir=f"{base_dir}/spectra/kSZ/LoReLi")
     df = pd.read_pickle(f'{base_dir}/metadata/LoReLi_database_loggedparams.pkl')
@@ -131,8 +131,13 @@ def main():
     err =np.sqrt(np.diag(err_cov))
     noise = np.random.normal(scale=err)
 
+    print('HIIIIIIIIIIIIIIII')
 
     for i, setup in enumerate(setups):
+        print("ON SETUP", i)
+        if i != 1:
+            print("MADE IT HERE")
+            continue
         config.addnoise = False
         config.addPlanck = False
 
@@ -168,15 +173,17 @@ def main():
         mcmc_run = MCMC(config,
                         dir=f"{dir}",
                         ells=ells[indices],
-                        p0=draws(ndraws=config.nwalkers)[:,2:], 
+                        p0=draws(ndraws=config.nwalkers)[:,2:],
                         emu=emu,
                         datapoints=datapoints,
                         A=np.random.uniform(.99,1.01, size=config.nwalkers),
                         Ashape=ratios.mean(axis=0),
                         Astats=[Amean, Asigma],
                         justpriors=True,
-                #     dryrun=True,
-                    #    showfigs=True,
+                        add_hkSZ=True,
+                        # dryrun=True,
+                        # showfigs=True,
+                        Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
                         verbose=True)
 
         mcmc_run.init_data()
@@ -187,4 +194,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

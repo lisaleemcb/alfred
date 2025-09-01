@@ -79,10 +79,10 @@ def whatthetau(params):
 
     return tau
 
-def addtau2chains(chain, truths, which_params):
-    whatthetau(fill(chain, truths, which_params))
+# def addtau2chains(chain, truths, which_params):
+#     whatthetau(fill(chain, truths, which_params))
 
-    return chain
+#     return chain
 
 
 def lnprior(theta, truths, priors,
@@ -226,9 +226,9 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
 
     if np.any(np.isnan(lp + ln)):
         print(f"Guess values {theta} are causing a NaN!")
-        return -np.inf
+        return np.asarray(-np.inf)
     if justpriors:
-        return lp
+        np.atleast_1d(lp)
     return lp + ln #, model3
 
 def lnlike(theta, model, data, err, debug=False):

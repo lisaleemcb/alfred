@@ -9,10 +9,10 @@ from alfred.emulator import kemu
 
 
 telescopes ={
-    'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0},
-    'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5},
-    'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142},
-    'CMB-HD': {'fsky':0.6, 'fwhm':0.42, 'noise':0.7},
+    'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0, 'fg_bump':2.0},
+    'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5, 'fg_bump':2.0},
+    'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142, 'fg_bump':1.5},
+    'CMB-HD': {'fsky':0.6, 'fwhm':0.42, 'noise':0.7, 'fg_bump':1.0},
 }
 
 def modes(ells, telescope):
@@ -41,7 +41,7 @@ def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy'
         print(f"Loading emulator error from {file}...")
     # std
     err = np.load(file)
-    
+
     # ells_emu = alfred.astrofit.ells
     # emu_err = (np.maximum(np.abs(err[0]), err[1]))**2
     # emu_err = 10.0 * np.interp(ells, ells_emu, emu_err)
@@ -76,10 +76,11 @@ def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
 
     sigma_residuals = np.zeros_like(datapoints)
     if include_fgresiduals:
+        bump_fg_fraction = telescope['fg_bump']
         fg_residuals = np.genfromtxt(fgres_file).T
-        sigma_residuals+= (modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])) / np.sqrt(delta_ell)
+        sigma_residuals+= bump_fg_fraction * (modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])) / np.sqrt(delta_ell)
 
-        if verbose:   
+        if verbose:
             print(f"foreground residuals: {sigma_residuals}")
 
     errors.append((sigma_CV + sigma_noise + sigma_residuals)**2.0)
@@ -92,8 +93,7 @@ def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
             print(f"emulator error: {var_emu}")
 
         errors.append(var_emu)
-    
+
     errors = np.sum(errors, axis=0)
 
     return np.diag(errors)
-
