@@ -359,6 +359,7 @@ class MCMC:
                     priors2d=priors2d,
                     justpriors=False,
                     fit_hksz=False,
+                    hksz_template=f"{base_dir}/metadata/dl_ksz_hom_AG.dat",
                     A_hksz=2.5, # muK^2
                     add_fg_residuals=False,
                     Planck=Planck,
@@ -442,6 +443,7 @@ class MCMC:
         self.justpriors = justpriors
         self.add_fg_residuals = add_fg_residuals
         self.fit_hksz = fit_hksz
+        self.hksz_template = hksz_template
         if self.addPlanck:
             self.Planck = Planck
             self.Planck_err = Planck_err
@@ -490,7 +492,7 @@ class MCMC:
         if self.fit_hksz:
             if self.verbose:
                 print(f"fitting homogeneous kSZ spectrum...")
-            hksz = np.genfromtxt(f"{base_dir}/metadata/dl_ksz_hom_AG.dat").T
+            hksz = np.genfromtxt(self.hksz_template).T
             self.hksz = np.interp(self.ells, hksz[0], hksz[1])
             self.datapoints += self.A_hksz * self.hksz
         elif not self.fit_hksz:
