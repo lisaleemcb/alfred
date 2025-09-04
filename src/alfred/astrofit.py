@@ -232,7 +232,7 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
             lp = -np.inf
         return np.atleast_1d(lp)
 
-    return np.atleast1d(lp + ln) #, model3
+    return np.atleast_1d(lp + ln) #, model3
 
 def lnlike(theta, model, data, err, debug=False):
     test = model(theta)
