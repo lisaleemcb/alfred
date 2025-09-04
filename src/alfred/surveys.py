@@ -76,9 +76,9 @@ def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
 
     sigma_residuals = np.zeros_like(datapoints)
     if include_fgresiduals:
-        bump_fg_fraction = telescope['fg_bump']
+      #  bump_fg_fraction = telescope['fg_bump']
         fg_residuals = np.genfromtxt(fgres_file).T
-        sigma_residuals+= bump_fg_fraction * (modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])) / np.sqrt(delta_ell)
+        sigma_residuals+=  (modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])) / np.sqrt(delta_ell)
 
         if verbose:
             print(f"foreground residuals: {sigma_residuals}")

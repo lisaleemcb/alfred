@@ -52,7 +52,6 @@ def main():
     validation_sims = np.load(f"{base_dir}/emulators/setrandomseed3/validation_sims.npy")
     df_validation = df.loc[validation_sims].copy()
 
-
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     config = SimpleNamespace(**config)
     print(f"Now initialising mcmc run from config file {config.title}...")

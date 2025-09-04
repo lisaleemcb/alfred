@@ -72,7 +72,7 @@ def xe2tau(z, xe):
         tofz = cumulative_trapezoid(integ, z, initial=0)
 
         return tofz
-    
+
 def whatthetau(params):
     xemu_Planck = keras_xe_emul.xe_emul_array(ztau, params, plot=False)
     tau = xe2tau(ztau, xemu_Planck)[:,-1]
@@ -89,7 +89,7 @@ def lnprior(theta, truths, priors,
             priors2d=priors2d, add2d=True, only3=False,
             Planck=Planck, Planck_err=Planck_err, addPlanck=True,
             verbose=False, debug=False):
-        
+
     if theta.ndim == 1:
         theta = theta[None,:]
 
@@ -118,7 +118,7 @@ def lnprior(theta, truths, priors,
 
         if debug:
             print(f"pass2d: {pass2d}")
-    
+
     if addPlanck:
         if verbose:
             print('I am checking the tau prior!')
@@ -171,7 +171,7 @@ def draws(ndraws, priors=priors, truths=dict(zip(df.columns, df.mean().to_numpy(
 def fill(guess, truths, which_params):
     if guess.ndim == 1:
             guess = guess[None,:]
-        
+
     theta_dict = cp.deepcopy(truths)
     # this seems complicated but it works even when the listed params are out of order
 
@@ -201,13 +201,13 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
         print(f"guess: {guess}")
         print(f"theta (filled): {theta}")
         # theta = guess
-        
+
     lp = lnprior(theta, truths, priors,
                 priors2d=priors2d, add2d=add2d,
                 Planck=Planck, Planck_err=Planck_err,
                 addPlanck=addPlanck, debug=debug)
-    if np.any(Aprior is not None):
-        lp += Aprior
+
+    lp += Aprior
 
     if debug:
         print(f"lp: {lp}")
@@ -228,8 +228,11 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
         print(f"Guess values {theta} are causing a NaN!")
         return np.asarray(-np.inf)
     if justpriors:
-        np.atleast_1d(lp)
-    return lp + ln #, model3
+        if np.ndim(lp) == 0:
+            lp = -np.inf
+        return np.atleast_1d(lp)
+
+    return np.atleast1d(lp + ln) #, model3
 
 def lnlike(theta, model, data, err, debug=False):
     test = model(theta)
@@ -246,7 +249,7 @@ def chi2_contribution(guess, model, data, priors, err, truths=None, which_params
                         vectorize=False, priors2d=priors2d, add2d=True,
                         Planck=Planck, Planck_err=Planck_err, addPlanck=False,
                         debug=False):
-    
+
     if debug:
         print(f"guess: {guess}")
     theta = fill(guess, truths, which_params)
@@ -258,23 +261,23 @@ def chi2_contribution(guess, model, data, priors, err, truths=None, which_params
                 priors2d=priors2d, add2d=add2d,
                 Planck=Planck, Planck_err=Planck_err,
                 addPlanck=addPlanck, debug=debug)
-    
+
     if debug:
         print(f"lp is {lp}")
-    
+
     lp = lp[:,None] * np.ones_like(data)
 
     test = model(theta)
 
     if debug:
         print(f"test is {test}")
-        
+
     return ((data - test) ** 2.0 / err**2.0) + lp
 
 def gelman_rubin_rhat(chains):
     """
     Compute the Gelman-Rubin R-hat statistic for convergence diagnostics.
-    
+
     Parameters:
         chains (ndarray): Shape (n_walkers, n_samples, n_params), where:
             - n_walkers: Number of MCMC chains (walkers)
@@ -309,7 +312,7 @@ def gelman_rubin_rhat(chains):
 
 def plot_vlines(values, axes, **kwargs):
     ndim = axes.shape[0]
-    
+
     for j in range(ndim):
         ax = axes[j, j]
         ax.axvline(values[j], **kwargs)
@@ -366,7 +369,7 @@ class MCMC:
                     dryrun=False,
                     verbose=False,
                     debug=False):
-        
+
         self.config = config
         self.verbose = verbose
         self.debug= debug
@@ -411,7 +414,7 @@ class MCMC:
         self.Astats = Astats
         self.Ashape = Ashape
         self.A_hksz = A_hksz
-        
+
         if emu is not None:
             if self.verbose:
                 print(f"using inputted emulator...")
@@ -426,7 +429,7 @@ class MCMC:
             self.emuerr_file = f'{base_dir}/emulators/{self.config.nndir}/{self.config.emu_version}/residuals.npy'
         else:
             self.emuerr_file = emuerr_file
-       
+
         self.addnoise = self.config.addnoise
         self.which_params = self.config.which_params
         self.priors = priors
@@ -544,7 +547,7 @@ class MCMC:
             print(f"True values for simulation {self.config.sn} are:")
             for key in self.truths:
                  print(f"\t {key}={self.truths[key]}")
-        
+
         if isinstance(self.emu, list):
             if self.verbose:
                 print(f"passed list of emulators...")
@@ -564,7 +567,7 @@ class MCMC:
                 pksz = (A / self.Ashape[lmask]) * emulator.kemu(p, self.emu)[lmask]
 
                 return hksz + pksz
-    
+
             elif p.ndim == 2:
                 hksz = A_hksz[:,None] * self.hksz[lmask]
                 pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, self.emu)[:,lmask]
@@ -587,9 +590,10 @@ class MCMC:
                         Astats=self.Astats)
 
         def lnprob_prepped(params):
+            passA = 0.0
             if np.any(self.A is not None):
                 model_params = params[:,:len(self.which_params)]
-                self.A = params[:,len(self.which_params)] 
+                self.A = params[:,len(self.which_params)]
                 self.Amean = self.Astats[0] * np.ones_like(self.A)
                 self.Asigma = self.Astats[1] * np.ones_like(self.A)
 
@@ -597,20 +601,23 @@ class MCMC:
                 # print(f"model_params: {model_params}")
                 # print(f"resetting A to  A={self.A}")
                 # print(f"in keeping with the lp of A: {passA}")
-                # print('')]                
+                # print('')]
                 if self.debug:
                     print(f"pass A= {passA} when fitting A")
             elif np.any(self.A is None):
                 model_params = params
-                passA = None
+                passA = 0.0
 
                 if self.debug:
                     print(f"pass A={passA} because not fitting A")
 
-            
             self.A_hksz = np.array([0.0])
             if self.fit_hksz:
                 self.A_hksz = params[:,len(self.which_params)+1]
+                if (0.0 <= self.A_hksz <= 10.0):
+                    passA += 0.0
+                else:
+                    passA = - np.inf
 
 
             return lnprob(model_params, lambda p: self.model(p, A=self.A, A_hksz=self.A_hksz),
@@ -619,11 +626,11 @@ class MCMC:
                         justpriors=self.justpriors,
                         Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
                         vectorize=self.vectorize, debug=self.debug)
-        
+
         def chi2_ell(params):
             if np.any(self.A is not None):
                 model_params = params[:,:-1]
-                self.A = params[:,-1] 
+                self.A = params[:,-1]
                 self.Amean = self.Astats[0] * np.ones_like(self.A)
                 self.Asigma = self.Astats[1] * np.ones_like(self.A)
 
@@ -641,10 +648,10 @@ class MCMC:
                         which_params=self.which_params, priors2d=self.priors2d, add2d=self.add2d,
                         Planck=self.Planck, Planck_err=self.Planck_err, addPlanck=self.addPlanck,
                         vectorize=self.vectorize, debug=False)
-            
+
         self.lnprob_prepped = lnprob_prepped
         self.chi2_ell = chi2_ell
-        
+
         if self.verbose:
             true_params = np.asarray(list(self.truths.values()))[2:] # HARD-CODED BEWARE!!!
             if np.any(self.A):
@@ -697,7 +704,7 @@ class MCMC:
             # p0[6] = pass_prior[52]
             #p0 = pass_prior[100:112]
             _p0 = _p0[:,np.where(np.isin(labels, self.which_params))[0]]
-                
+
         elif self.p0 is not None:
             _p0 = self.p0
             print(f"p0 shape: {_p0.shape}")
@@ -733,13 +740,13 @@ class MCMC:
         self.sampler = zeus.EnsembleSampler(self.nwalkers, self.ndim, self.lnprob_prepped,
                 #      args=[datapoints, err, theta_true, lmask, which_params],
                         moves=zeus.moves.GlobalMove(self.rescale_cov), vectorize=self.vectorize)
-        
+
         if self.dryrun:
             callbacks = None
-        
+
         elif not self.dryrun:
             callbacks = [save_progress, autocorr_check, R_check, miniter_check]
-        
+
         self.sampler.run_mcmc(start, self.nsteps, callbacks=callbacks)
         end_time = time.time()
 
@@ -770,4 +777,3 @@ class MCMC:
             print('Done, YAY!')
 
         return self.sampler
-

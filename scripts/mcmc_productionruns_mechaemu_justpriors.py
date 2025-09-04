@@ -182,7 +182,7 @@ def main():
     Ashape = np.mean(np.mean(ratios_all,axis=0), axis=0)
 
     for i, setup in enumerate(setups[:2]):
-        if i == 0:
+        if i == 1:
             continue
         for key in setup.keys():
                     print(f"{key} = {setup[key]}")

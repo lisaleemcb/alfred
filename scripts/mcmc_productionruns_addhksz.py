@@ -43,15 +43,15 @@ def main():
     parser.add_argument("--nndir", type=str, help="which emulator runs to use")
     parser.add_argument("--version", type=str, help="which version of emulator")
     parser.add_argument("--overwrite", type=bool, help="whether or not to skip folders if existing")
-    
+
     # Parse arguments
     args = parser.parse_args()
-    
+
     print('reading in database...')
 
     validation_sims = np.load(f"{base_dir}/emulators/setrandomseed3/validation_sims.npy")
     df_validation = df.loc[validation_sims].copy()
- 
+
 
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     config = SimpleNamespace(**config)
@@ -131,9 +131,9 @@ def main():
 
             print(f"residuals file saved to {path_residuals}")
             print()
-        
+
         residuals_all.append(residuals)
-        
+
         if os.path.exists(path_ratios):
             print(f'{path_ratios} already exists')
             ratios = np.load(path_ratios)
@@ -163,7 +163,7 @@ def main():
 
     print(f"emu error : {emu_error.shape}")
 
-    
+
     emuerr_file = f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
     print(f"emu err: {emu_error.shape}")
     print(f'saving average error file to {emuerr_file}...')
@@ -192,7 +192,7 @@ def main():
 
         mcmc_run = MCMC(config,
                         ells=ells[indices],
-                        p0=draws(ndraws=config.nwalkers)[:,2:], 
+                        p0=draws(ndraws=config.nwalkers)[:,2:],
                         emu=mob,
                         emuerr_file=emuerr_file,
                         datapoints=cp.deepcopy(datapoints),
@@ -200,7 +200,7 @@ def main():
                         Ashape=Ashape,
                         Astats=[Amean, Asigma],
                         fit_hksz=True,
-                        A_hksz=2.5, # muK^2
+                        A_hksz=2.9, # muK^2
                         add_fg_residuals=True,
                     # dryrun=True,
                     # showfigs=True,
@@ -216,4 +216,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
