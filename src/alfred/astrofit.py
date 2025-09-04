@@ -518,7 +518,7 @@ class MCMC:
                                     include_emulator=True,
                                     include_fgresiduals=self.add_fg_residuals,
                                     verbose=self.verbose)
-        self.err =np.sqrt(np.diag(self.err_cov))
+        self.err = np.sqrt(np.diag(self.err_cov))
 
         if self.addnoise:
             if self.verbose:
@@ -614,7 +614,7 @@ class MCMC:
             self.A_hksz = np.array([0.0])
             if self.fit_hksz:
                 self.A_hksz = params[:,len(self.which_params)+1]
-                if (0.0 <= self.A_hksz <= 10.0):
+                if (0.0 <= np.any(self.A_hksz) <= 10.0):
                     passA += 0.0
                 else:
                     passA = - np.inf
