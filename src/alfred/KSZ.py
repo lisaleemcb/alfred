@@ -27,9 +27,9 @@ def get_KSZ(ells, interpolate_xe=True,interpolate_Pee=True,
             kmin=1e-6, kmax=3000, xemin=0.0, xemax=1.16,
             dz=dz, verbose=True,  debug=False):
         #     kmin=kmin, kmax=kmax, xemin=xemin, xemax=xemax):
-    
+
     KSZ = KSZ_power(verbose=verbose, interpolate_xe=interpolate_xe, interpolate_Pee=interpolate_Pee,
-                helium=helium, helium2=helium2, debug=debug, alpha0=alpha0, kappa=kappa, 
+                helium=helium, helium2=helium2, debug=debug, alpha0=alpha0, kappa=kappa,
                 Pee_data=Pee_data, xe_data=xe_data, z_data=z_data, k_data=k_data,
                 xemin=xemin, xemax=xemax, kmin=kmin, kmax=kmax, dz=dz)
     KSZ.run_camb(force=True)
@@ -186,7 +186,6 @@ class KSZ_power:
         self.T_cmb = T_cmb
         self.n_s = n_s
 
-
         if cosmomc:
             self.obh2 = Ob_0
             self.och2 = Om_0
@@ -271,19 +270,19 @@ class KSZ_power:
                 raise ValueError("xe interpolation from data requested, which requires a xe and z but missing xe")
             if z_data is None:
                 raise ValueError("xe interpolation from data requested, which requires a xe and z but missing z")
-            # 
+            #
             # perform checks
             if np.all(np.diff(z_data) > 0):
                 if xe_data[-1] > xe_data[0]:
                     raise ValueError("Your redshift and xe orders are not consistent. \
-                                        One is time-ordered earliest to latest and the other is the opposite!") 
+                                        One is time-ordered earliest to latest and the other is the opposite!")
                 else:
                     self.data_order = 'low to high redshift'
 
             if np.all(np.diff(z_data) < 0):
                 if xe_data[-1] < xe_data[0]:
                     raise ValueError("Your redshift and xe orders are not consistent. \
-                                        One is time-ordered earliest to latest and the other is the opposite!") 
+                                        One is time-ordered earliest to latest and the other is the opposite!")
                 else:
                     self.data_order = 'high to low redshift'
 
@@ -294,8 +293,8 @@ class KSZ_power:
                 # print('================================')
                 # print(f'Pee: {Pee_data}')
                 # print(f'xe: {xe_data}')
-                # print(f'z: {z_data}')  
-                # print(f'k: {k_data}')   
+                # print(f'z: {z_data}')
+                # print(f'k: {k_data}')
 
                 import matplotlib
 
@@ -329,8 +328,8 @@ class KSZ_power:
                 # print('================================')
                 # print(f'Pee: {self.Pee_data}')
                 # print(f'xe: {self.xe_data}')
-                # print(f'z: {self.z_data}')  
-                # print(f'k: {self.k_data}')             
+                # print(f'z: {self.z_data}')
+                # print(f'k: {self.k_data}')
 
                 import matplotlib
 
@@ -598,7 +597,7 @@ class KSZ_power:
 
         return 0.5 * (np.exp(-k / kf)
                       + 1.0 / (1.0 + np.power(g * k / kf, 2.0)))
-    
+
     def find_index(self, arr):
         n = len(arr)
         for i in range(n - 1):
@@ -606,17 +605,17 @@ class KSZ_power:
             if np.all(np.diff(arr[i:]) > 0):
                 return i
         return None  # Return None if no such index is found
-    
+
     def find_zpiv(self):
         from scipy.optimize import root_scalar
         # Define the equation f(x) - val1 = 0 to solve for x
 
         def find_z_xefrac(z_guess):
             return self.xe(z_guess, just_H=True) - self.xemax
-        
+
 #        print(f'bound is {self.z_data[self.xe_data < (self.xemax)].min()}')
 
-        bracket = [4.0, self.z_data[self.xe_data < (self.xemax)].min()]  
+        bracket = [4.0, self.z_data[self.xe_data < (self.xemax)].min()]
       #  print(f'bracket: {bracket}')
       #  print(f'find between: {find_z_xefrac(4.0)}, {find_z_xefrac(self.z_data[self.xe_data < self.xemax].min())}')
         # Find x using root_scalar within the x range
@@ -629,16 +628,16 @@ class KSZ_power:
         zpiv = sol.root
 
         return zpiv
-    
+
     def set_zinteg(self, dz):
-        
+
         # print(f'dz={dz}')
         zpiv = self.find_zpiv()
         z_pre =  np.logspace(np.log10(z_min), np.log10(zpiv),
             int((np.log10(zpiv) - np.log10(z_min)) / dlogz) + 1)
-        
+
         #print(f"dz={dz}")
-        
+
         self.z_EOR = np.arange(zpiv + dz, 10.0, step=dz)
         # print(f"dz={dz}")
         # print(f"z_EOR diff is {np.diff(z_EOR)}")
@@ -653,7 +652,7 @@ class KSZ_power:
         # print(f"z_EOR step size is {np.diff(z_EOR)}")
 
         return z_integ
-            
+
     def Pee(self, k, z):
         """
         Electron overdensity power spectrum.
@@ -686,12 +685,12 @@ class KSZ_power:
 
         xe = self.xe(z, just_H=True)
 
-        if not self.interpolate_Pee: 
+        if not self.interpolate_Pee:
             if self.debug:
-                print('Using Gorce model for Pee...')     
+                print('Using Gorce model for Pee...')
             Pee = (self.f - xe) / self.f * self.W(k, xe) + xe \
                         / self.f * self.bdH(k, z) * self.Pk(k, z)
-            
+
         elif self.interpolate_Pee:
             if self.debug:
                 print('Interpolating Pee...')
@@ -734,14 +733,14 @@ class KSZ_power:
             self.mask_k = mask_k
             self.mask_z = mask_z
             self.mask_xe = mask_xe
-        
+
         Pee = Pee * mask_k * mask_z * mask_xe
-        
+
         return Pee
-    
+
     def earlytime(self,z,k):
-        return (self.f - self.xe(z)) / self.f * self.W(k, self.xe(z)) 
-        
+        return (self.f - self.xe(z)) / self.f * self.W(k, self.xe(z))
+
     def latetime(self,z,k):
         return  self.xe(z) / self.f * self.bdH(k, z) * self.Pk(k, z)
         #return  self.Pk(k, z) # self.bdH(k, z) #* self.Pk(k, z)
@@ -1019,7 +1018,7 @@ class KSZ_power:
 
         else:
             g = np.ones(self.z_integ.size, dtype=bool)
-        
+
         self.k_z_integ = ell / self.eta_z_integ
 
         # in [Mpc-1]
@@ -1033,7 +1032,7 @@ class KSZ_power:
         #     raise Warning('Extrapolating the matter PK to too small or too large k')
         self.check_ell = ell
         # Compute I_tot1 and I_tot2, in [Mpc^2]
-        self.Pee_min_kp = self.Pee(self.k_min_kp, self.z_integ[:, None, None]) 
+        self.Pee_min_kp = self.Pee(self.k_min_kp, self.z_integ[:, None, None])
         self.Pk_min_kp = self.Pk(self.k_min_kp, self.z_integ[:, None, None])
         self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, self.z_integ[:, None, None])
 
@@ -1125,7 +1124,7 @@ class KSZ_power:
         self.check_ell = ell
         # Compute I_tot1 and I_tot2, in [Mpc^2]
 
-        self.Pee_min_kp = self.Pee(self.k_min_kp, self.z_integ[:, None, None]) 
+        self.Pee_min_kp = self.Pee(self.k_min_kp, self.z_integ[:, None, None])
         self.Pk_min_kp = self.Pk(self.k_min_kp, self.z_integ[:, None, None])
         self.Pk_lin_min_kp = self.Pk_lin(self.k_min_kp, self.z_integ[:, None, None])
 

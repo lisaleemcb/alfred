@@ -16,11 +16,11 @@ def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=
 
     '''
     zvect : vect of z values at which xe should be evaluated [z increasing]
-    params: dict of params values 
-            eg: params = {'fX':-2.71669877 , 
-                          'rHS':0.2        , 
-                           'tau': 3.51074603  , 
-                           'Mmin':9.33       , 
+    params: dict of params values
+            eg: params = {'fX':-2.71669877 ,
+                          'rHS':0.2        ,
+                           'tau': 3.51074603  ,
+                           'Mmin':9.33       ,
                            'fesc': 0.275 }
     Emul: name of the directory containing the keras files
     allH: means H plus 1st reio of He
@@ -31,15 +31,12 @@ def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=
 
 
     parmeansstd = data.item()["parmeansstd"]
-    zm = data.item()["zm"]    
+    zm = data.item()["zm"]
     zs = data.item()["zs"]
     xe_interp = data.item()["xe_int"]
 
 
     X0_values = np.array([(params[key]-parmeansstd[key]["mean"])/parmeansstd[key]["std"] for key in params.keys()])
-    
-
-    
 
     Yval = model.predict(X0_values[None,:],verbose = 0)
 
@@ -47,7 +44,7 @@ def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=
 
     x_vals = np.hstack(([1e-1,0.98*zval[0]],zval.flatten()))
     x_vals = np.hstack((x_vals,[1.02*zval[-1]]))
-                    
+
     y_vals = np.hstack(([1,1],xe_interp.flatten()[::-1]))
     y_vals = np.hstack((y_vals,[0.5*y_vals[-1]]))
 
@@ -60,7 +57,7 @@ def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=
 
     if He2:
         # He2 reionization
-        
+
         helium_fullreion_redshift       = zHe  ## default 3.5
         helium_fullreion_deltaredshift  = 0.5  ## default 3.5
         helium_fullreion_redshiftstart  = 5.0
@@ -95,12 +92,12 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
     '''
     zvect : vect of z values at which xe should be evaluated [z increasing]
-    params: dict of params values 
+    params: dict of params values
             eg: params_array = [[-2.77],[0.2],[3.51],[9.33],[0.275]]
-    old :  params_array = [[-2.71669877] , 
-                          'rHS':0.2        , 
-                           'tau': 3.51074603  , 
-                           'Mmin':9.33       , 
+    old :  params_array = [[-2.71669877] ,
+                          'rHS':0.2        ,
+                           'tau': 3.51074603  ,
+                           'Mmin':9.33       ,
                            'fesc': 0.275 }
     Emul: name of the directory containing the keras files
     allH: means H plus 1st reio of He
@@ -117,10 +114,10 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
     nmodels =  np.shape(params_array)[1]
 
     keys = ['fX', 'rHS','tau', 'Mmin', 'fesc']
-    
+
 
     parmeansstd = data.item()["parmeansstd"]
-    zm = data.item()["zm"]    
+    zm = data.item()["zm"]
     zs = data.item()["zs"]
     xe_interp = data.item()["xe_int"]
 
@@ -131,23 +128,23 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
     zval = (Yval.T * zs + zm)[::-1]
 
-    
+
 
     pt0 = np.zeros(nmodels)+1e-1
     pt1 =  np.zeros(nmodels)+0.98*zval[0,:]
     pt98 = np.zeros(nmodels)+1.02*zval[-1,:]
     pt99 = np.zeros(nmodels)+2*zval[-1,:]
-    
+
 
     x_vals = np.vstack((pt0,pt1,zval,pt98, pt99))
     #x_vals = np.hstack((x_vals,[1.02*zval[-1]]))
-                    
+
     y_vals = np.hstack(([1,1],xe_interp.flatten()[::-1]))
     y_vals = np.hstack((y_vals,[0.5*y_vals[-1]], [1e-10]))
 
     xe_final = []
 
-    
+
 
     for jmod in np.arange(nmodels):
 
@@ -159,7 +156,7 @@ def xe_emul_array(zvect, params_array, emul="keras_xe_emul_glx", He1=True, He2=T
 
         if He2:
             # He2 reionization
-        
+
             helium_fullreion_redshift       = zHe  ## default 3.5
             helium_fullreion_deltaredshift  = 0.5  ## default 3.5
             helium_fullreion_redshiftstart  = 5.0

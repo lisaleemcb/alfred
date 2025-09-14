@@ -172,7 +172,7 @@ def main():
     ratios_all = np.asarray(ratios_all)
     Amean = np.mean(ratios_all)
     Asigma = np.std(ratios_all)
-    Ashape = utils.spectra(config.sn) / emulator.kemu(df.loc[config.sn].to_numpy(), mob)
+    Ashape = utils.spectra(config.sn)[indices] / emulator.kemu(df.loc[config.sn].to_numpy(), mob)
 
     for i, setup in enumerate(setups):
         for key in setup.keys():

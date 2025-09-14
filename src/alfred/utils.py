@@ -123,7 +123,7 @@ def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir=base_dir):
     path = f'{base_dir}/{dir}'
 
     print(f'parsing {path} ...')
-        
+
     for filename in os.listdir(path):
         #files_LoReLi.append(filename)
         # print(repr(filename))
@@ -133,7 +133,7 @@ def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir=base_dir):
             sims.append(match.group())
         else:
             print(f'filename {filename} has no match')
-    
+
     print(f'{len(sims)} sims available')
 
     return sims
@@ -143,14 +143,14 @@ def spectra(sn, dir='nells30_v5', key='Dell', basedir=base_dir, prefix='kSZ_LoRe
     f = np.load(fn, allow_pickle=True)
 
     return f[key]
-    
+
 def smooth_Pee(sim):
     k = []
     Pee = []
     for i in range(0, sim.k.size - 1,2):
         k.append((sim.k[i] + sim.k[i + 1]) / 2.0)
         Pee.append((sim.Pee[:,i] + sim.Pee[:,i + 1]) / 2.0)
-    
+
     Pee = np.asarray(Pee).T
 
     return k, Pee
@@ -183,15 +183,15 @@ def summon_emu(dir, base=f"{base_dir}/emulators", verbose=False):
     emu = {'scalerX': scalerX,
         'scalerY': scalerY,
         'model': model}
-    
+
     if verbose:
         print(f"SUMMONING THE EMU!!! From {path}...")
-    
+
     return emu
 
 def plot_vlines(values, axes, **kwargs):
     ndim = axes.shape[0]
-    
+
     for j in range(ndim):
         ax = axes[j, j]
         ax.axvline(values[j], **kwargs)
@@ -228,3 +228,65 @@ def plot_vlines(values, axes, **kwargs):
 # ax.scatter(kappas_sims,alphas_sims,color='navy',label='Our simulations',marker='+', s=80,zorder=10)
 
 # plt.tight_layout()
+
+def xe(z, z_data, xe_data, helium=True, helium2=True, just_H=False):
+    """
+    From alfred.KSZ.py but for use without class
+    Computes model's reionisation history.
+
+    The redshift-asymmetric parameterisation of xe(z) in Douspis+2015
+    and the class parameters are used.
+
+    Parameters
+    ----------
+        z: (array of) float(s)
+            Redshift range used to compute the ionisation history.
+    """
+
+    from scipy.interpolate import interp1d
+    from alfred.parameters import fHe, xe_recomb, helium_fullreion_redshift, helium_fullreion_deltaredshift
+
+    z_data = np.sort(z_data)
+    xe_data = np.sort(xe_data)[::-1]
+    xe_spline = interp1d(z_data, xe_data, axis=0, fill_value="extrapolate") #CubicSpline(z, xe, axis=0)
+
+    frac = 1.0 # - self.xe_recomb)
+    xe_He = 0
+    if helium:
+        frac = (1.0 + fHe - xe_recomb)
+        # add second He reionisation
+        if helium2:
+            assert (helium), "Need to set both He reionisation "\
+                "to True, cannot have HeII without HeI"
+            a = np.divide(1, z + 1.0)
+            deltayHe2 = (
+                1.5
+                * np.sqrt(1 + helium_fullreion_redshift)
+                * helium_fullreion_deltaredshift
+            )
+            VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
+            xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
+            tgh2 = np.tanh(xod2)  # check if xod<100
+            xe_He += (fHe - xe_recomb) * (tgh2 + 1.0) / 2.0
+            #  self.xe_He = np.where(z < self.z_early, self.xe_He, 0.0)
+
+        xe_early = np.where(z > z_data.max(), xe_recomb, 0.0)
+        xe_reion = frac * np.where((z <= z_data.max()) & (z >= z_data.min()), xe_spline(z), 0.0)
+        xe_late = np.where(z < z_data.min(), frac, 0.0)
+
+        # print(frac)
+        # print(f'early {self.xe_early}')
+        # print(f'reion {self.xe_reion}')
+        # print(f'late {self.xe_late}')
+        # print(f'He {self.xe_He}')
+
+        if just_H:
+            return xe_early + (xe_reion + xe_late) / frac
+
+        xe = xe_early + xe_reion + xe_late + xe_He
+        # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
+        if helium:
+            xe = np.where((z < helium_fullreion_redshift - 1) & (xe <= (1.0 + 2 * fHe - xe_recomb)), (1.0 + 2 * fHe - xe_recomb), xe)
+
+
+    return xe

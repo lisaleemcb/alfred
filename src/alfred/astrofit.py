@@ -1,5 +1,6 @@
 import os, re, time
 import copy as cp
+import toml
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -10,6 +11,8 @@ import corner
 import zeus
 from scipy.integrate import cumulative_trapezoid
 from astropy import cosmology, units, constants
+from types import SimpleNamespace
+
 
 import joblib
 import tensorflow as tf
@@ -33,6 +36,9 @@ df = pd.read_pickle(f"{base_dir}/metadata/LoReLi_database_loggedparams.pkl")
 df = df.loc[df.index.intersection(get_sims(dir='spectra/kSZ/LoReLi/nells30_v5'))]
 # failed = np.load(f'{base_dir}/metadata/sims_failed.npy', allow_pickle=True)
 # df = df.drop(failed, errors='ignore')
+#
+config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
+config = SimpleNamespace(**config)
 
 xe_histories = np.load(f'{base_dir}/metadata/ion_histories_full.npz', allow_pickle=True)
 xe_histories = xe_histories['arr_0'].item()
@@ -168,7 +174,7 @@ def draws(ndraws, priors=priors, truths=dict(zip(df.columns, df.mean().to_numpy(
 
     return draws
 
-def fill(guess, truths, which_params):
+def fill(guess, truths, which_params=df.columns[2:]):
     if guess.ndim == 1:
             guess = guess[None,:]
 
@@ -214,25 +220,31 @@ def lnprob(guess, model, data, err, truths, priors, Aprior=None,
         print(f"Aprior: {Aprior}")
     # if not np.isfinite(lp):
     #     return -np.inf#, 0.
-    ln = lnlike(theta, model, data, err, debug=debug)
+    #
+    if not justpriors:
+        ln = lnlike(theta, model, data, err, debug=debug)
 
-    if debug:
-        print(f"lp: {lp}")
-        print(f"ln: {ln}")
-        print(f"ln + lp = {lp + ln}")
+        if debug:
+            print(f"lp: {lp}")
+            print(f"ln: {ln}")
+            print(f"ln + lp = {lp + ln}")
 
-    if not vectorize:
-        return (lp + ln)[0]
+        if not vectorize:
+            return (lp + ln)[0]
 
-    if np.any(np.isnan(lp + ln)):
-        print(f"Guess values {theta} are causing a NaN!")
-        return np.asarray(-np.inf)
-    if justpriors:
+        if np.any(np.isnan(lp + ln)):
+            print(f"Guess values {theta} are causing a NaN!")
+            return np.asarray(-np.inf)
+
+        return np.atleast_1d(lp + ln) #, model3
+
+    elif justpriors:
         if np.ndim(lp) == 0:
             lp = -np.inf
+
         return np.atleast_1d(lp)
 
-    return np.atleast_1d(lp + ln) #, model3
+
 
 def lnlike(theta, model, data, err, debug=False):
     test = model(theta)
