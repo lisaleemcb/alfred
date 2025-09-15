@@ -65,14 +65,6 @@ def main():
                     'addnoise': False,
                     'addPlanck': False}
 
-    datapoints = utils.spectra(config.sn)[indices]
-    err_cov = surveys.error_cov(ells[indices],
-                            datapoints,
-                            surveys.telescopes[config.survey],
-                            include_emulator=False)
-    err =np.sqrt(np.diag(err_cov))
-    noise = np.random.normal(scale=err)
-
     #=================================================================
     # RUNNING MCMC
     #=================================================================
@@ -168,6 +160,15 @@ def main():
         print("=========================================")
         config.sn = sn
         config.title = f'noiseless_simu{config.sn}'
+
+        datapoints = utils.spectra(config.sn)[indices]
+        err_cov = surveys.error_cov(ells[indices],
+                                datapoints,
+                                surveys.telescopes[config.survey],
+                                include_emulator=False)
+        err =np.sqrt(np.diag(err_cov))
+        noise = np.random.normal(scale=err)
+
         if config.addnoise:
             datapoints += noise
 

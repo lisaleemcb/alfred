@@ -25,7 +25,7 @@ for i in range(k_bins.size-1):
 k_center = np.asarray(k_center)
 
 norm_z = matplotlib.colors.Normalize(vmin=3.0, vmax=22)
-cmap_z = plt.get_cmap('viridis_r')
+cmap_z = plt.get_cmap('viridis')
 
 norm_xe = matplotlib.colors.LogNorm(vmin=1.7e-4, vmax=1.16)
 cmap_xe = plt.get_cmap('plasma')
@@ -50,7 +50,7 @@ astro_labels_formatted = [
  'Xray \n Lfunc',
  'hard \n Xray \n fraction'
  'gas \n conversion \n timescale',
- 'log10_Mmin',                  
+ 'log10_Mmin',
  'ion \n escapefrac \n post']
 
 ##########################
@@ -156,7 +156,7 @@ KSZ_params = {'alpha0': 3.7,
 
 ells_old = np.linspace(1,15000, 30)
 ells = np.arange(0, 15000, 500)
-ells[0] = 100   
+ells[0] = 100
 
 ########################################
 #### Integration/precision settings ####

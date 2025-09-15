@@ -22,7 +22,7 @@ redshift_fn = 'metadata/redshift_list.dat'
 survey = 'CMB-HD'
 lmin = 1500
 lmax = 10000
-addnoise = true
+addnoise = false
 use_data = true
 sn = '12958'
 
