@@ -578,13 +578,13 @@ class MCMC:
 
             if p.ndim == 1:
                 hksz = A_hksz * self.hksz[lmask]
-                pksz = (A / self.Ashape[lmask]) * emulator.kemu(p, self.emu)[lmask]
+                pksz = (A * self.Ashape[lmask]) * emulator.kemu(p, self.emu)[lmask]
 
                 return hksz + pksz
 
             elif p.ndim == 2:
                 hksz = A_hksz[:,None] * self.hksz[lmask]
-                pksz = (A[:,None] / self.Ashape[None,lmask]) * emulator.kemu(p, self.emu)[:,lmask]
+                pksz = (A[:,None] * self.Ashape[None,lmask]) * emulator.kemu(p, self.emu)[:,lmask]
 
                 return hksz + pksz
 
