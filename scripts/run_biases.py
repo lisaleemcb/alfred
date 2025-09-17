@@ -101,7 +101,7 @@ def main():
     print('running through sims...')
     for sn in df_validation.index:
         tspec = utils.spectra(sn)[indices]
-        espec = emulator.mechkemu(df.loc[sn].to_numpy(), mob)
+        espec = emulator.kemu(df.loc[sn].to_numpy(), mob)
 
         residuals.append(tspec - espec)
         ratios.append(tspec / espec)
