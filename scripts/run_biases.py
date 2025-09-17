@@ -45,15 +45,15 @@ def main():
     parser.add_argument("--nndir", type=str, help="which emulator runs to use")
     parser.add_argument("--version", type=str, help="which version of emulator")
     parser.add_argument("--overwrite", type=str, help="whether to enforce no overwriting")
-    
+
     # Parse arguments
     args = parser.parse_args()
-    
+
     print('reading in database...')
 
     validation_sims = np.load(f"{base_dir}/emulators/setrandomseed3/validation_sims.npy")
     df_validation = df.loc[validation_sims].copy()
- 
+
 
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     config = SimpleNamespace(**config)
@@ -61,7 +61,7 @@ def main():
 
     if args.survey:
         config.survey = args.survey
-    config.savedir = f"biases/{args.savedir}"
+    config.savedir = f"biases_rerun_lowernoise/{args.savedir}"
     path = f"{base_dir}/inference/{config.savedir}"
     print(f'Saving to directory {path}...')
     if args.overwrite:
@@ -121,7 +121,7 @@ def main():
         config.sn = sn
         mcmc_run = MCMC(config,
                         ells=ells[indices],
-                        p0=draws(ndraws=config.nwalkers)[:,2:], 
+                        p0=draws(ndraws=config.nwalkers)[:,2:],
                         emu=mob,
                         emuerr_file=emuerr_file,
                         # datapoints=datapoints,
@@ -141,4 +141,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
