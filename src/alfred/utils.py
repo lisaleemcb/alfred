@@ -138,7 +138,8 @@ def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir=base_dir):
 
     return sims
 
-def spectra(sn, dir='nells30_v5', key='Dell', basedir=base_dir, prefix='kSZ_LoReLi'):
+def spectra(sn, dir='nells30_v5', key='Dell', basedir=base_dir, prefix='kSZ_LoReLi',
+    verbose=True):
     fn = f"{base_dir}/spectra/kSZ/LoReLi/{dir}/{prefix}_simu{sn}.npz"
     f = np.load(fn, allow_pickle=True)
 

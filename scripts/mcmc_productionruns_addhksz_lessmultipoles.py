@@ -97,7 +97,7 @@ def main():
         config.nsteps = 100
 
     config.nndir = args.nndir
-    config.lmin = 2500
+    config.lmin = 1500
     config.lmax = 5000
 
     mob = []
@@ -177,6 +177,8 @@ def main():
     Ashape = np.mean(np.mean(ratios_all,axis=0), axis=0)
 
     for i, setup in enumerate(setups):
+        if i != 0:
+            continue
         for key in setup.keys():
                     print(f"{key} = {setup[key]}")
                     setattr(config, key, setup[key])

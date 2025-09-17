@@ -355,6 +355,37 @@ def make_tauchains(mechachain, A=True, dropA=True, truths=None):
 
     return mechachain
 
+def normed_bias(samples, sn, ci=68, dropA=True):
+    lower_q = (100 - ci) / 2
+    upper_q = 100 - lower_q
+
+    true_params = np.asarray([*df.loc[sn].to_numpy()[2:],
+                        *whatthetau(df.loc[sn].to_numpy())])
+    samples = make_tauchains(samples, truths=df.loc[sn].to_dict(), dropA=dropA)
+
+    # Posterior median
+    median_val = np.median(samples, axis=0)
+
+    # Both bounds in one call
+    low, high = np.percentile(samples, [lower_q, upper_q], axis=0)
+    low_err = median_val - low
+    high_err = high - median_val
+
+    # Bias and normalized bias
+    bias = median_val - true_params
+
+    sigma_bias = np.zeros_like(bias)
+    for bi, bb in enumerate(bias):
+        if bb <= 0.0:
+            sigma_bias[bi] = low_err[bi]
+        elif bb > 0.0:
+            sigma_bias[bi] = high_err[bi]
+
+# sigma_68_sym = 0.5 * (high - low)  # for bias/σ, use symmetric approx
+    nbias = bias / sigma_bias # sigma_68_sym
+
+    return nbias
+
 class MCMC:
     def __init__(self,
                     config,
