@@ -67,11 +67,29 @@ def main():
     if args.overwrite:
         os.makedirs(path)
 
-    sampled_sims = df.sample(n=100).index.to_list()
-
     fn_sampled = f"{path}/sampled_pvals.npy"
+    previous_sims = np.load(fn_sampled)
+    sampled_sims = []
+
+    directory = f"{base_dir}/inference/biases_rerun_lowernoise/{args.savedir}"
+    pattern = re.compile(r'(\d{5})')
+
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        # print(filepath)
+
+        match = pattern.search(filename)
+        if match:
+            sn = match[0]
+            if sn in ['18861', '19048', '17587', '17734']:
+                continue
+            if os.path.exists(f"{filepath}/saved_chains.h5"):
+                sampled_sims.append(sn)
+
+    new_sims = df.sample(n=100).index.to_list()
+
     print(f'Saving sampled parameter values to {fn_sampled}')
-    np.save(fn_sampled, sampled_sims)
+
 
      #=================================================================
     # RUNNING MCMC
@@ -116,7 +134,7 @@ def main():
     Asigma = np.std(ratios)
     Ashape = np.mean(ratios, axis=0)
 
-    for sn in sampled_sims:
+    for sn in new_sims:
         config.title = f"bias_simu{sn}"
         config.sn = sn
         mcmc_run = MCMC(config,
@@ -136,6 +154,9 @@ def main():
         mcmc_run.init_data()
         mcmc_run.init_run(savefig=True)
         sampler = mcmc_run.start_run(save=True)
+
+        sampled_sims.append(sn)
+        np.save(fn_sampled, sampled_sims)
 
         print()
 

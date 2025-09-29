@@ -51,7 +51,13 @@ features = cp.deepcopy(df.to_numpy())
 pass_prior = np.load(f'{base_dir}/inference/priors/pass_prior.npy')
 pass_Planck = np.load(f'{base_dir}/inference/priors/pass_Planckprior.npy')
 
-emu = summon_emu('v5.0')
+# emu = summon_emu('v5.0')
+
+mob = []
+for i in range(5):
+    print(f"Now on {i} run...")
+    emu = summon_emu(f"setrandomseed3/emuv5.1_run{i}")
+    mob.append(emu)
 
 p_from_dict = lambda pdict: np.asarray(list(pdict.values()))
 p_from_npz = lambda file: np.asarray(list(file['truths'].item().values()))
@@ -368,8 +374,8 @@ def normed_bias(samples, sn, ci=68, dropA=True):
 
     # Both bounds in one call
     low, high = np.percentile(samples, [lower_q, upper_q], axis=0)
-    low_err = median_val - low
-    high_err = high - median_val
+    low_err = true_params - low
+    high_err = high - true_params
 
     # Bias and normalized bias
     bias = median_val - true_params
@@ -385,6 +391,19 @@ def normed_bias(samples, sn, ci=68, dropA=True):
     nbias = bias / sigma_bias # sigma_68_sym
 
     return nbias
+
+def get_ci(samples, sn, ci=95, edges=False):
+    lower_q = (100 - ci) / 2
+    upper_q = 100 - lower_q
+    tausamples = make_tauchains(samples[:,:3], truths=df.loc[sn].to_dict(), A=False, dropA=False)
+    low, high = np.percentile(tausamples, [lower_q, upper_q], axis=0)
+
+    CI = high - low
+
+    if edges:
+        return CI, low, high
+
+    return CI
 
 class MCMC:
     def __init__(self,
