@@ -38,7 +38,7 @@ from alfred.parameters import *
 from alfred.astrofit import *
 
 
-def parse_batch(directory, ext):
+def parse_batch(dir, ext):
     sampled_sims = []
     truths = []
     medians = []
@@ -51,7 +51,7 @@ def parse_batch(directory, ext):
     for i in range(10):
         print(f"On {i}")
 
-        # directory = f"{base_dir}/inference/biases_randomseed5/samples_{i}"
+        directory = f"{dir}/samples_{i}"
         for filename in os.listdir(directory):
             filepath = os.path.join(directory, filename)
             # print(filepath)
@@ -110,12 +110,12 @@ def parse_batch(directory, ext):
 
 
 def main():
-    directory = f"{base_dir}/inference/biases/samples_{i}"
+    dir = f"{base_dir}/inference/biases"
     print(f"Now running through {directory}...")
-    parse_batch(directory, "v_1")
+    parse_batch(dir, "v_1")
 
-    directory = f"{base_dir}/inference/biase_rerun_lowernoise/samples_{i}"
-    print(f"Now running through {directory}...")
+    dir = f"{base_dir}/inference/biase_rerun_lowernoise"
+    print(f"Now running through {dir}...")
     parse_batch(directory, "v_2")
 
 
