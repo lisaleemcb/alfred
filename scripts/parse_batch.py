@@ -111,12 +111,12 @@ def parse_batch(dir, ext):
 
 def main():
     dir = f"{base_dir}/inference/biases"
-    print(f"Now running through {directory}...")
+    print(f"Now running through {dir}...")
     parse_batch(dir, "v_1")
 
     dir = f"{base_dir}/inference/biase_rerun_lowernoise"
     print(f"Now running through {dir}...")
-    parse_batch(directory, "v_2")
+    parse_batch(dir, "v_2")
 
 
 if __name__ == "__main__":
