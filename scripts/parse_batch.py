@@ -23,7 +23,8 @@ import alfred.surveys as surveys
 import joblib
 import keras
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
+
+tf.config.set_visible_devices([], "GPU")
 
 import warnings
 from types import SimpleNamespace
@@ -36,6 +37,7 @@ import alfred.utils as utils
 from alfred.parameters import *
 from alfred.astrofit import *
 
+
 def parse_batch(directory, ext):
     sampled_sims = []
     truths = []
@@ -45,7 +47,7 @@ def parse_batch(directory, ext):
     low95 = []
     high95 = []
 
-    pattern = re.compile(r'(\d{5})')
+    pattern = re.compile(r"(\d{5})")
     for i in range(10):
         print(f"On {i}")
 
@@ -59,9 +61,9 @@ def parse_batch(directory, ext):
                 sn = match[0]
                 # print(f"On sim {sn}")
                 if sn in sampled_sims:
-                    print(f'resampled')
+                    print(f"resampled")
                     continue
-                if sn in ['18861', '19048', '17587', '17734']:
+                if sn in ["18861", "19048", "17587", "17734"]:
                     continue
                 if not os.path.exists(f"{filepath}/saved_chains.h5"):
                     continue
@@ -84,7 +86,6 @@ def parse_batch(directory, ext):
                 low95.append(low)
                 high95.append(high)
 
-
                 sampled_sims.append(sn)
                 truths.append(truth)
                 medians.append(np.median(s, axis=0))
@@ -97,9 +98,9 @@ def parse_batch(directory, ext):
     low95 = np.asarray(low95)
     high95 = np.asarray(high95)
 
-    np.save(f'sampledsims_{ext}', sampled_sims)
-    np.save(f'truths_{ext}', truths)
-    np.save(f'medians_{ext}', medians)
+    np.save(f"sampledsims_{ext}", sampled_sims)
+    np.save(f"truths_{ext}", truths)
+    np.save(f"medians_{ext}", medians)
     np.save(f"low68_{ext}", low68)
     np.save(f"high68_{ext}", high68)
     np.save(f"low95_{ext}", low95)
@@ -107,14 +108,16 @@ def parse_batch(directory, ext):
 
     return
 
-def main()
+
+def main():
     directory = f"{base_dir}/inference/biases/samples_{i}"
     print(f"Now running through {directory}...")
-    parse_batch(directory, 'v_1')
+    parse_batch(directory, "v_1")
 
     directory = f"{base_dir}/inference/biase_rerun_lowernoise/samples_{i}"
     print(f"Now running through {directory}...")
-    parse_batch(directory, 'v_2')
+    parse_batch(directory, "v_2")
+
 
 if __name__ == "__main__":
     main()
