@@ -113,15 +113,16 @@ def parse_batch(dir, ext):
     intervals68 = np.swapaxes(intervals68, 1, 2)
     intervals95 = np.swapaxes(intervals95, 1, 2)
 
-    np.save(f"sims_{ext}", sampled_sims)
-    np.save(f"truths_{ext}", truths)
-    np.save(f"medians_{ext}", medians)
-    np.save(f"low68_{ext}", low68)
-    np.save(f"high68_{ext}", high68)
-    np.save(f"low95_{ext}", low95)
-    np.save(f"high95_{ext}", high95)
-    np.save(f"intervals68_{ext}", intervals68)
-    np.save(f"intervals95_{ext}", intervals95)
+    savedir = f"{home_dir}/batchstats_{ext}"
+    np.save(f"{savedir}/sims_{ext}", sampled_sims)
+    np.save(f"{savedir}/truths_{ext}", truths)
+    np.save(f"{savedir}/medians_{ext}", medians)
+    np.save(f"{savedir}/low68_{ext}", low68)
+    np.save(f"{savedir}/high68_{ext}", high68)
+    np.save(f"{savedir}/low95_{ext}", low95)
+    np.save(f"{savedir}/high95_{ext}", high95)
+    np.save(f"{savedir}/intervals68_{ext}", intervals68)
+    np.save(f"{savedir}/intervals95_{ext}", intervals95)
 
     return
 
