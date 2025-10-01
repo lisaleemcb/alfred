@@ -46,6 +46,8 @@ def parse_batch(dir, ext):
     high68 = []
     low95 = []
     high95 = []
+    edges68 = []
+    edges95 = []
 
     pattern = re.compile(r"(\d{5})")
     for i in range(10):
@@ -69,7 +71,9 @@ def parse_batch(dir, ext):
                     continue
 
                 s, l = utils.load_samples(filepath, verbose=False)
-                samples = make_tauchains(s, truths=df.loc[sn].to_dict(), dropA=True)
+                samples = make_tauchains(
+                    s[:, :3], truths=df.loc[sn].to_dict(), dropA=False
+                )
                 truth = [*df.loc[sn].to_numpy(), *whatthetau(df.loc[sn].to_numpy())]
 
                 ci = 68
@@ -86,6 +90,9 @@ def parse_batch(dir, ext):
                 low95.append(low)
                 high95.append(high)
 
+                edges68.append((low68, high68))
+                edges95.append((low95, high95))
+
                 sampled_sims.append(sn)
                 truths.append(truth)
                 medians.append(np.median(s, axis=0))
@@ -97,14 +104,24 @@ def parse_batch(dir, ext):
     high68 = np.asarray(high68)
     low95 = np.asarray(low95)
     high95 = np.asarray(high95)
+    edges68 = np.asarray(edges68)
+    edges95 = np.asarray(edges95)
 
-    np.save(f"sampledsims_{ext}", sampled_sims)
+    intervals68 = edges68 - np.stack([medians, medians], axis=1)
+    intervals95 = edges95 - np.stack([medians, medians], axis=1)
+
+    intervals68 = np.swapaxes(intervals68, 1, 2)
+    intervals95 = np.swapaxes(intervals95, 1, 2)
+
+    np.save(f"sims_{ext}", sampled_sims)
     np.save(f"truths_{ext}", truths)
     np.save(f"medians_{ext}", medians)
     np.save(f"low68_{ext}", low68)
     np.save(f"high68_{ext}", high68)
     np.save(f"low95_{ext}", low95)
     np.save(f"high95_{ext}", high95)
+    np.save(f"intervals68_{ext}", intervals68)
+    np.save(f"intervals95_{ext}", intervals95)
 
     return
 
@@ -112,11 +129,11 @@ def parse_batch(dir, ext):
 def main():
     dir = f"{base_dir}/inference/biases"
     print(f"Now running through {dir}...")
-    parse_batch(dir, "v_1")
+    parse_batch(dir, "v1")
 
     dir = f"{base_dir}/inference/biases_rerun_lowernoise"
     print(f"Now running through {dir}...")
-    parse_batch(dir, "v_2")
+    parse_batch(dir, "v2")
 
 
 if __name__ == "__main__":
