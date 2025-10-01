@@ -82,6 +82,7 @@ def parse_batch(dir, ext):
                 low, high = np.percentile(samples, [lower_q, upper_q], axis=0)
                 low68.append(low)
                 high68.append(high)
+                edges68.append((low, high))
 
                 ci = 95
                 lower_q = (100 - ci) / 2
@@ -89,13 +90,11 @@ def parse_batch(dir, ext):
                 low, high = np.percentile(samples, [lower_q, upper_q], axis=0)
                 low95.append(low)
                 high95.append(high)
-
-                edges68.append((low68, high68))
-                edges95.append((low95, high95))
+                edges95.append((low, high))
 
                 sampled_sims.append(sn)
                 truths.append(truth)
-                medians.append(np.median(s, axis=0))
+                medians.append(np.median(samples, axis=0))
 
     sampled_sims = np.asarray(sampled_sims)
     truths = np.asarray(truths)
