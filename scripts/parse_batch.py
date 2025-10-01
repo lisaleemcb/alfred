@@ -114,7 +114,7 @@ def main():
     print(f"Now running through {dir}...")
     parse_batch(dir, "v_1")
 
-    dir = f"{base_dir}/inference/biase_rerun_lowernoise"
+    dir = f"{base_dir}/inference/biases_rerun_lowernoise"
     print(f"Now running through {dir}...")
     parse_batch(dir, "v_2")
 
