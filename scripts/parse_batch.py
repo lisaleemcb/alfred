@@ -120,16 +120,18 @@ def parse_batch(dir, ext):
     np.save(f"{savedir}/high68_{ext}", high68)
     np.save(f"{savedir}/low95_{ext}", low95)
     np.save(f"{savedir}/high95_{ext}", high95)
-    np.save(f"{savedir}/intervals68_{ext}", intervals68)
-    np.save(f"{savedir}/intervals95_{ext}", intervals95)
+    np.save(f"{savedir}/CI68_{ext}", high68 - low68)
+    np.save(f"{savedir}/CI95_{ext}", high95 - low95)
+    np.save(f"{savedir}/intervals68_{ext}", np.abs(intervals68))
+    np.save(f"{savedir}/intervals95_{ext}", np.abs(intervals95))
 
     return
 
 
 def main():
-    dir = f"{base_dir}/inference/biases"
-    print(f"Now running through {dir}...")
-    parse_batch(dir, "v1")
+    # dir = f"{base_dir}/inference/biases"
+    # print(f"Now running through {dir}...")
+    # parse_batch(dir, "v1")
 
     dir = f"{base_dir}/inference/biases_rerun_lowernoise"
     print(f"Now running through {dir}...")
