@@ -41,6 +41,7 @@ from alfred.astrofit import *
 def parse_batch(dir, ext):
     sampled_sims = []
     truths = []
+    ravg = []
     medians = []
     low68 = []
     high68 = []
@@ -74,7 +75,10 @@ def parse_batch(dir, ext):
                 samples = make_tauchains(
                     s[:, :3], truths=df.loc[sn].to_dict(), dropA=False
                 )
-                truth = [*df.loc[sn].to_numpy(), *whatthetau(df.loc[sn].to_numpy())]
+                truth = np.asarray(
+                    [*df.loc[sn].to_numpy(), *whatthetau(df.loc[sn].to_numpy())]
+                )
+                ravg.append(np.mean(samples[2:] - truth[None, :], axis=0))
 
                 ci = 68
                 lower_q = (100 - ci) / 2
@@ -98,6 +102,7 @@ def parse_batch(dir, ext):
 
     sampled_sims = np.asarray(sampled_sims)
     truths = np.asarray(truths)
+    ravg = np.asarray(ravg)
     medians = np.asarray(medians)
     low68 = np.asarray(low68)
     high68 = np.asarray(high68)
@@ -115,6 +120,7 @@ def parse_batch(dir, ext):
     savedir = f"{home_dir}/batchstats_{ext}"
     np.save(f"{savedir}/sims_{ext}", sampled_sims)
     np.save(f"{savedir}/truths_{ext}", truths)
+    np.save(f"{savedir}/ravg_{ext}")
     np.save(f"{savedir}/medians_{ext}", medians)
     np.save(f"{savedir}/low68_{ext}", low68)
     np.save(f"{savedir}/high68_{ext}", high68)
@@ -129,9 +135,9 @@ def parse_batch(dir, ext):
 
 
 def main():
-    # dir = f"{base_dir}/inference/biases"
-    # print(f"Now running through {dir}...")
-    # parse_batch(dir, "v1")
+    dir = f"{base_dir}/inference/biases"
+    print(f"Now running through {dir}...")
+    parse_batch(dir, "v1")
 
     dir = f"{base_dir}/inference/biases_rerun_lowernoise"
     print(f"Now running through {dir}...")

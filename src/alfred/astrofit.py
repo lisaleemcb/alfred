@@ -411,7 +411,7 @@ def plot_vlines(values, axes, **kwargs):
             ax.plot(values[xi], **kwargs)
 
 
-def make_tauchains(mechachain, A=True, dropA=True, truths=None):
+def make_tauchains(mechachain, truths, A=False, dropA=False):
     stop = 4
     if A is False:
         stop = 3
