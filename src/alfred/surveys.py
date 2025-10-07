@@ -8,35 +8,40 @@ from alfred.utils import summon_emu
 from alfred.emulator import kemu
 
 
-telescopes ={
-    'SO-LAT': {'fsky':0.4, 'fwhm':1.5, 'noise':6.0, 'fg_bump':2.0},
-    'SO-SAT': {'fsky':0.1, 'fwhm':10.0, 'noise':2.5, 'fg_bump':2.0},
-    'CMB-S4': {'fsky':0.6, 'fwhm':1.0, 'noise': 1.4142, 'fg_bump':1.5},
-    'CMB-HD': {'fsky':0.6, 'fwhm':0.42, 'noise':0.7, 'fg_bump':1.0},
+telescopes = {
+    "SO-LAT": {"fsky": 0.4, "fwhm": 1.5, "noise": 6.0, "fg_bump": 2.0},
+    "SO-SAT": {"fsky": 0.1, "fwhm": 10.0, "noise": 2.5, "fg_bump": 2.0},
+    "CMB-S4": {"fsky": 0.6, "fwhm": 1.0, "noise": 1.4142, "fg_bump": 1.5},
+    "CMB-HD": {"fsky": 0.6, "fwhm": 0.42, "noise": 0.7, "fg_bump": 1.0},
 }
 
+
 def modes(ells, telescope):
-    return np.sqrt(2./telescope['fsky']/(2.*ells+1.))
+    return np.sqrt(2.0 / telescope["fsky"] / (2.0 * ells + 1.0))
+
 
 def sample_var(ells, Dl, telescope):
     if np.shape(ells) != np.shape(Dl):
-        raise ValueError('ekls and Dl must have the same shape.')
+        raise ValueError("ekls and Dl must have the same shape.")
     dDl = Dl * modes(ells, telescope)
     return dDl
 
 
 def noise(ls, telescope, pol=False, is_cl=False):
     ls = np.atleast_1d(ls)
-    sig0 = telescope['noise'] / 60.0 * np.pi / 180.0 # arcmin to rad
-    fwhm = telescope['fwhm'] / 60.0 * np.pi / 180.0 # arcmin to rad
-    nl = sig0**2 / 2. * np.exp(ls*(ls+1.)*fwhm**2/8./np.log(2.))
+    sig0 = telescope["noise"] / 60.0 * np.pi / 180.0  # arcmin to rad
+    fwhm = telescope["fwhm"] / 60.0 * np.pi / 180.0  # arcmin to rad
+    nl = sig0**2 / 2.0 * np.exp(ls * (ls + 1.0) * fwhm**2 / 8.0 / np.log(2.0))
     if pol:
-        nl *= 2.
+        nl *= 2.0
     if not is_cl:
-        nl *= ls*(ls+1.)/2./np.pi
+        nl *= ls * (ls + 1.0) / 2.0 / np.pi
     return nl
 
-def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy', verbose=True):
+
+def emu_error(
+    ells, file=f"{base_dir}/emulators/setrandomseed3/emulator_std.npy", verbose=True
+):
     if verbose:
         print(f"Loading emulator error from {file}...")
     # std
@@ -48,18 +53,30 @@ def emu_error(ells, file=f'{base_dir}/emulators/setrandomseed3/emulator_std.npy'
 
     return err
 
+
 # print(f"cosmic variance: {surveys.sample_var(mcmc_run.ells, mcmc_run.datapoints, telescopes['CMB-HD'])**2}")
 # print(f"noise: {err[mcmc_run.lmask]**2}")
 # print(f"emu: {surveys.emu_error(ells[indices])[mcmc_run.lmask]}**2")
 
-def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
-            include_samplevar=False, include_noise=False,
-            include_emulator=False, include_fgresiduals=False,
-            emuerr_file=f"{base_dir}/emulators/reduced_dataset/emuv5.0_run0/emu_err.npy",
-            fgres_file=f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt"):
 
+def error_cov(
+    ells,
+    datapoints,
+    telescope,
+    verbose=False,
+    sn="12958",
+    include_samplevar=False,
+    include_noise=False,
+    include_emulator=False,
+    include_fgresiduals=False,
+    emuerr_file=f"{base_dir}/Datasets/LoReLi/emulators/setrandomseed3/ensemble_error_v5.1.npy",
+    fgres_file=f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt",
+):
     delta_ell = ells[1:] - ells[:-1]
-    delta_ell = [*delta_ell, delta_ell[-1]] # assumes the last bin is same as second to last
+    delta_ell = [
+        *delta_ell,
+        delta_ell[-1],
+    ]  # assumes the last bin is same as second to last
     errors = []
 
     sigma_CV = np.zeros_like(datapoints)
@@ -70,23 +87,27 @@ def error_cov(ells, datapoints, telescope, verbose=False, sn='12958',
 
     sigma_noise = np.zeros_like(datapoints)
     if include_noise:
-        sigma_noise += (modes(ells, telescope) * surveys.noise(ells, telescope, pol=False)) / np.sqrt(delta_ell)
+        sigma_noise += (
+            modes(ells, telescope) * surveys.noise(ells, telescope, pol=False)
+        ) / np.sqrt(delta_ell)
         if verbose:
             print(f"noise: {sigma_noise}")
 
     sigma_residuals = np.zeros_like(datapoints)
     if include_fgresiduals:
-      #  bump_fg_fraction = telescope['fg_bump']
+        #  bump_fg_fraction = telescope['fg_bump']
         fg_residuals = np.genfromtxt(fgres_file).T
-        sigma_residuals+=  (modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])) / np.sqrt(delta_ell)
+        sigma_residuals += (
+            modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])
+        ) / np.sqrt(delta_ell)
 
         if verbose:
             print(f"foreground residuals: {sigma_residuals}")
 
-    errors.append((sigma_CV + sigma_noise + sigma_residuals)**2.0)
+    errors.append((sigma_CV + sigma_noise + sigma_residuals) ** 2.0)
 
     if include_emulator:
-        var_emu = surveys.emu_error(ells, file=emuerr_file, verbose=verbose)**2.0
+        var_emu = surveys.emu_error(ells, file=emuerr_file, verbose=verbose) ** 2.0
         # emu = summon_emu('v5.0_err')
         # emu_err = kemu(alfred.astrofit.df.loc[sn].to_numpy(), **emu)
         if verbose:
