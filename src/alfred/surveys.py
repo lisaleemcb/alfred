@@ -69,15 +69,21 @@ def error_cov(
     include_noise=False,
     include_emulator=False,
     include_fgresiduals=False,
+    binning=True,
     emuerr_file=f"{base_dir}/emulators/setrandomseed3/ensemble_error_v5.1.npy",
     fgres_file=f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt",
 ):
-    delta_ell = ells[1:] - ells[:-1]
-    delta_ell = [
-        *delta_ell,
-        delta_ell[-1],
-    ]  # assumes the last bin is same as second to last
     errors = []
+
+    if binning:
+        delta_ell = ells[1:] - ells[:-1]
+        delta_ell = [
+            *delta_ell,
+            delta_ell[-1],
+        ]  # assumes the last bin is same as second to last
+
+    else:
+        delta_ell = 1.0
 
     sigma_CV = np.zeros_like(datapoints)
     if include_samplevar:
