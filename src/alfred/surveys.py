@@ -69,7 +69,7 @@ def error_cov(
     include_noise=False,
     include_emulator=False,
     include_fgresiduals=False,
-    emuerr_file=f"{base_dir}/Datasets/LoReLi/emulators/setrandomseed3/ensemble_error_v5.1.npy",
+    emuerr_file=f"{base_dir}/emulators/setrandomseed3/ensemble_error_v5.1.npy",
     fgres_file=f"{base_dir}/metadata/cmbhd_fgs_coadded_noksz_Dl.txt",
 ):
     delta_ell = ells[1:] - ells[:-1]
