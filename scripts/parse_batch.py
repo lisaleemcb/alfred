@@ -78,7 +78,7 @@ def parse_batch(dir, ext):
                 truth = np.asarray(
                     [*df.loc[sn].to_numpy(), *whatthetau(df.loc[sn].to_numpy())]
                 )
-                ravg.append(np.mean(samples - truth[None, 2:], axis=0))
+                ravg.append(np.mean(np.where(samples < truth[None, 2:], 1, 0), axis=0))
 
                 ci = 68
                 lower_q = (100 - ci) / 2
