@@ -83,7 +83,7 @@ def parse_batch(dir, ext):
 
                 samples_random = draws(ndraws=samples.shape[0])[:, 2:]
                 samples_random = make_tauchains(
-                    s[:, 2:], truths=df.loc[sn].to_dict(), dropA=False
+                    samples_random, truths=df.loc[sn].to_dict(), dropA=False
                 )
                 ravg_random.append(
                     np.mean(np.where(samples_random < truth[None, 2:], 1, 0), axis=0)
