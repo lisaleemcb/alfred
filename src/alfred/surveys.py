@@ -76,6 +76,8 @@ def error_cov(
     errors = []
 
     if binning:
+        if verbose:
+            print(f"binning in ell...")
         delta_ell = ells[1:] - ells[:-1]
         delta_ell = [
             *delta_ell,

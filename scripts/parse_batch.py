@@ -42,6 +42,7 @@ def parse_batch(dir, ext):
     sampled_sims = []
     truths = []
     ravg = []
+    ravg_random = []
     medians = []
     low68 = []
     high68 = []
@@ -79,6 +80,11 @@ def parse_batch(dir, ext):
                     [*df.loc[sn].to_numpy(), *whatthetau(df.loc[sn].to_numpy())]
                 )
                 ravg.append(np.mean(np.where(samples < truth[None, 2:], 1, 0), axis=0))
+
+                samples_random = draws(ndraws=samples.shape[0])[2:]
+                ravg_random.append(
+                    np.mean(np.where(samples_random < truth[None, 2:], 1, 0), axis=0)
+                )
 
                 ci = 68
                 lower_q = (100 - ci) / 2
