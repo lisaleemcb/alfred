@@ -127,6 +127,7 @@ def parse_batch(dir, ext):
     np.save(f"{savedir}/sims_{ext}", sampled_sims)
     np.save(f"{savedir}/truths_{ext}", truths)
     np.save(f"{savedir}/ravg_{ext}", ravg)
+    np.save(f"{savedir}/ravg_random_{ext}", ravg_random)
     np.save(f"{savedir}/medians_{ext}", medians)
     np.save(f"{savedir}/low68_{ext}", low68)
     np.save(f"{savedir}/high68_{ext}", high68)
