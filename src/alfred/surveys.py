@@ -113,7 +113,7 @@ def error_cov(
 
         if verbose:
             print(f"foreground residuals: {sigma_residuals}")
-            print(f"foregrounds bumped by: {telescopes[telescope]['fg_bump']}")
+            print(f"foregrounds bumped by: {telescope['fg_bump']}")
 
     errors.append((sigma_CV + sigma_noise + sigma_residuals) ** 2.0)
 
