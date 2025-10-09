@@ -494,6 +494,7 @@ class MCMC:
         ells=None,
         lmask=None,
         datapoints=None,
+        err=None,
         p0=None,
         A=None,
         Ashape=None,
@@ -547,6 +548,7 @@ class MCMC:
         self.telescope = self.config.survey
         self.ells = ells
         self.datapoints = datapoints
+        self.err = err
 
         if lmask is not None:
             self.lmask = lmask
@@ -662,18 +664,21 @@ class MCMC:
                 print(f"running with nuisance parameter, A, with Gaussian priors:")
                 print(f"A mean, sigma: {self.Astats}")
 
-        self.err_cov = surveys.error_cov(
-            self.ells,
-            self.datapoints,
-            surveys.telescopes[self.telescope],
-            emuerr_file=self.emuerr_file,
-            include_samplevar=True,
-            include_noise=True,
-            include_emulator=True,
-            include_fgresiduals=self.add_fg_residuals,
-            verbose=self.verbose,
-        )
-        self.err = np.sqrt(np.diag(self.err_cov))
+        if self.err is None:
+            if self.verbose:
+                print(f"no error specified...generating error")
+            self.err_cov = surveys.error_cov(
+                self.ells,
+                self.datapoints,
+                surveys.telescopes[self.telescope],
+                emuerr_file=self.emuerr_file,
+                include_samplevar=True,
+                include_noise=True,
+                include_emulator=True,
+                include_fgresiduals=self.add_fg_residuals,
+                verbose=self.verbose,
+            )
+            self.err = np.sqrt(np.diag(self.err_cov))
 
         if self.addnoise:
             if self.verbose:
