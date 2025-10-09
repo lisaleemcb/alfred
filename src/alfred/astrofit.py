@@ -638,18 +638,21 @@ class MCMC:
                     print("using emulated kSZ spectrum for datapoints...")
                 self.datapoints = emulator.mechkemu(self.theta_true, self.emu)
                 print(f"first datapoints: {self.datapoints}")
+
+            if self.fit_hksz:
+                if self.verbose:
+                    print(f"fitting homogeneous kSZ spectrum...")
+                hksz = np.genfromtxt(self.hksz_template).T
+                self.hksz = np.interp(self.ells, hksz[0], hksz[1])
+                if
+                self.datapoints += self.A_hksz * self.hksz
+
+            elif not self.fit_hksz:
+                self.hksz = np.zeros_like(self.datapoints)
         else:
             if self.verbose:
                 print("Using input data for datapoints")
 
-        if self.fit_hksz:
-            if self.verbose:
-                print(f"fitting homogeneous kSZ spectrum...")
-            hksz = np.genfromtxt(self.hksz_template).T
-            self.hksz = np.interp(self.ells, hksz[0], hksz[1])
-            self.datapoints += self.A_hksz * self.hksz
-        elif not self.fit_hksz:
-            self.hksz = np.zeros_like(self.datapoints)
 
         if self.Ashape is None:
             self.Ashape = np.ones_like(self.datapoints)
