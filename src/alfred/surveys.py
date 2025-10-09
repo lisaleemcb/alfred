@@ -109,11 +109,11 @@ def error_cov(
             modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])
         ) / np.sqrt(delta_ell)
 
-        fg_residuals *= telescope[telescope]["fg_bump"]
+        fg_residuals *= telescopes[telescope]["fg_bump"]
 
         if verbose:
             print(f"foreground residuals: {sigma_residuals}")
-            print(f"foregrounds bumped by: {telescope[telescope]['fg_bump']}")
+            print(f"foregrounds bumped by: {telescopes[telescope]['fg_bump']}")
 
     errors.append((sigma_CV + sigma_noise + sigma_residuals) ** 2.0)
 
