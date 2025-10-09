@@ -21,7 +21,8 @@ import alfred.surveys as surveys
 import joblib
 import keras
 import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
+
+tf.config.set_visible_devices([], "GPU")
 
 import warnings
 from types import SimpleNamespace
@@ -42,16 +43,19 @@ def main():
     parser.add_argument("--savedir", type=str, help="where to save mcmcs")
     parser.add_argument("--nndir", type=str, help="which emulator runs to use")
     parser.add_argument("--version", type=str, help="which version of emulator")
-    parser.add_argument("--overwrite", type=bool, help="whether or not to skip folders if existing")
+    parser.add_argument(
+        "--overwrite", type=bool, help="whether or not to skip folders if existing"
+    )
 
     # Parse arguments
     args = parser.parse_args()
 
-    print('reading in database...')
+    print("reading in database...")
 
-    validation_sims = np.load(f"{base_dir}/emulators/setrandomseed3/validation_sims.npy")
+    validation_sims = np.load(
+        f"{base_dir}/emulators/setrandomseed3/validation_sims.npy"
+    )
     df_validation = df.loc[validation_sims].copy()
-
 
     config = toml.load(f"{home_dir}/alfred/scripts/config_files/mcmc_config.toml")
     config = SimpleNamespace(**config)
@@ -61,35 +65,33 @@ def main():
         config.survey = args.survey
     config.savedir = f"{args.savedir}/{config.survey}"
 
-    noiseless = {'title': 'noiseless',
-                    'addnoise': False,
-                    'addPlanck': False}
+    noiseless = {"title": "noiseless", "addnoise": False, "addPlanck": False}
 
-    noiseless_Planck = {'title': 'noiseless_Planck',
-                    'addnoise': False,
-                    'addPlanck': True}
+    noiseless_Planck = {
+        "title": "noiseless_Planck",
+        "addnoise": False,
+        "addPlanck": True,
+    }
 
-    addnoise = {'title': 'addnoise',
-                    'addnoise': True,
-                    'addPlanck': False}
+    addnoise = {"title": "addnoise", "addnoise": True, "addPlanck": False}
 
-    addnoise_Planck = {'title': 'addnoise_Planck',
-                    'addnoise': True,
-                    'addPlanck': True}
+    addnoise_Planck = {"title": "addnoise_Planck", "addnoise": True, "addPlanck": True}
 
     setups = [noiseless, noiseless_Planck, addnoise, addnoise_Planck]
 
     datapoints = utils.spectra(config.sn)[indices]
-    err_cov = surveys.error_cov(ells[indices],
-                            datapoints,
-                            surveys.telescopes[config.survey],
-                            include_emulator=False)
-    err =np.sqrt(np.diag(err_cov))
+    err_cov = surveys.error_cov(
+        ells[indices],
+        datapoints,
+        surveys.telescopes[config.survey],
+        include_emulator=False,
+    )
+    err = np.sqrt(np.diag(err_cov))
     noise = np.random.normal(scale=err)
 
-    #=================================================================
+    # =================================================================
     # RUNNING MCMC
-    #=================================================================
+    # =================================================================
     testing = False
 
     if testing:
@@ -111,14 +113,18 @@ def main():
 
         mob.append(emu)
 
-        path_residuals = f'{base_dir}/emulators/{config.nndir}/{config.emu_version}/residuals.npy'
-        path_ratios = f'{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy'
+        path_residuals = (
+            f"{base_dir}/emulators/{config.nndir}/{config.emu_version}/residuals.npy"
+        )
+        path_ratios = (
+            f"{base_dir}/emulators/{config.nndir}/{config.emu_version}/ratios.npy"
+        )
 
         if os.path.exists(path_residuals):
-            print(f'{path_residuals} already exists')
+            print(f"{path_residuals} already exists")
             residuals = np.load(path_residuals)
         else:
-            print('creating residuals files...')
+            print("creating residuals files...")
             emu = summon_emu(f"{config.nndir}/{config.emu_version}")
             tspec = np.zeros((len(validation_sims), len(ells[indices])))
             for i, sn in enumerate(df_validation.index):
@@ -135,10 +141,10 @@ def main():
         residuals_all.append(residuals)
 
         if os.path.exists(path_ratios):
-            print(f'{path_ratios} already exists')
+            print(f"{path_ratios} already exists")
             ratios = np.load(path_ratios)
         else:
-            print('creating ratios file...')
+            print("creating ratios file...")
             emu = summon_emu(f"{config.nndir}/{config.emu_version}")
             tspec = np.zeros((len(validation_sims), len(ells[indices])))
             for i, sn in enumerate(df_validation.index):
@@ -163,21 +169,22 @@ def main():
 
     print(f"emu error : {emu_error.shape}")
 
-
-    emuerr_file = f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
+    emuerr_file = (
+        f"{base_dir}/emulators/{config.nndir}/ensemble_error_{args.version}.npy"
+    )
     print(f"emu err: {emu_error.shape}")
-    print(f'saving average error file to {emuerr_file}...')
+    print(f"saving average error file to {emuerr_file}...")
     np.save(emuerr_file, emu_error)
 
     ratios_all = np.asarray(ratios_all)
     Amean = np.mean(ratios_all)
     Asigma = np.std(ratios_all)
-    Ashape = np.mean(np.mean(ratios_all,axis=0), axis=0)
+    Ashape = np.mean(np.mean(ratios_all, axis=0), axis=0)
 
     for i, setup in enumerate(setups):
         for key in setup.keys():
-                    print(f"{key} = {setup[key]}")
-                    setattr(config, key, setup[key])
+            print(f"{key} = {setup[key]}")
+            setattr(config, key, setup[key])
 
         datapoints = cp.deepcopy(utils.spectra(config.sn)[indices])
         if config.addnoise:
@@ -186,33 +193,38 @@ def main():
         config.addnoise = False
 
         if not args.overwrite:
-             if os.path.exists(f"{config.savedir}/{config.title}"):
-                  print(f"Skipping run for {config.title}. Already exists and overwrite is {args.overwrite}")
-                  continue
+            if os.path.exists(f"{config.savedir}/{config.title}"):
+                print(
+                    f"Skipping run for {config.title}. Already exists and overwrite is {args.overwrite}"
+                )
+                continue
 
-        mcmc_run = MCMC(config,
-                        ells=ells[indices],
-                        p0=draws(ndraws=config.nwalkers)[:,2:],
-                        emu=mob,
-                        emuerr_file=emuerr_file,
-                        datapoints=cp.deepcopy(datapoints),
-                        A=np.random.uniform(.99,1.01, size=config.nwalkers),
-                        Ashape=Ashape,
-                        Astats=[Amean, Asigma],
-                        fit_hksz=True,
-                        A_hksz=2.9, # muK^2
-                        add_fg_residuals=True,
-                    # dryrun=True,
-                    # showfigs=True,
-                        Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
-                        verbose=True,
-                        debug=False)
+        mcmc_run = MCMC(
+            config,
+            ells=ells[indices],
+            p0=draws(ndraws=config.nwalkers)[:, 2:],
+            emu=mob,
+            emuerr_file=emuerr_file,
+            datapoints=cp.deepcopy(datapoints),
+            A=np.random.uniform(0.99, 1.01, size=config.nwalkers),
+            Ashape=Ashape,
+            Astats=[Amean, Asigma],
+            fit_hksz=True,
+            A_hksz=2.9,  # muK^2
+            add_fg_residuals=True,
+            # dryrun=True,
+            # showfigs=True,
+            Planck=whatthetau(df.loc[config.sn].to_numpy())[0],
+            verbose=True,
+            debug=False,
+        )
 
         mcmc_run.init_data()
         mcmc_run.init_run(savefig=True)
         sampler = mcmc_run.start_run(save=True)
 
         print()
+
 
 if __name__ == "__main__":
     main()
