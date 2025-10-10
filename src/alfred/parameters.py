@@ -42,20 +42,13 @@ astro_labels = [
 
 astro_pnames = ["L_X", "f_X", "tau", "Mmin", "f_esc"]
 astro_pnames_formatted = [
-    r"$L_X$",
+    r"$\log{f_X}$",
     r"$r_{\mathrm{H/S}}$",
     r"$\tau_{\mathrm{SF}}$",
-    r"$M_{\mathrm{min}}$",
+    r"$\log{M_{\mathrm{min}}}$",
     r"$f_{\mathrm{esc}}$",
     r"$\tau_{\mathrm{CMB}}$",
     r"$A_{\mathrm{hkSZ}}$",
-]
-
-astro_labels_formatted = [
-    "Xray \n Lfunc",
-    "hard \n Xray \n fractiongas \n conversion \n timescale",
-    "log10_Mmin",
-    "ion \n escapefrac \n post",
 ]
 
 ##########################

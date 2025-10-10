@@ -182,6 +182,8 @@ def main():
     Ashape = np.mean(np.mean(ratios_all, axis=0), axis=0)
 
     for i, setup in enumerate(setups):
+        if i != 0:
+            continue
         for key in setup.keys():
             print(f"{key} = {setup[key]}")
             setattr(config, key, setup[key])
@@ -205,7 +207,7 @@ def main():
             p0=draws(ndraws=config.nwalkers)[:, 2:],
             emu=mob,
             emuerr_file=emuerr_file,
-            datapoints=cp.deepcopy(datapoints),
+            datapoints=None,  # will pull from config file
             A=np.random.uniform(0.99, 1.01, size=config.nwalkers),
             Ashape=Ashape,
             Astats=[Amean, Asigma],

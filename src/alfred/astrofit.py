@@ -94,6 +94,34 @@ def xe2tau(z, xe):
     return tofz
 
 
+def xe2tau_plot(z):
+    """
+    Computes redshift evolution of the model's optical depth. This one is reversed for plotting purposes
+
+    Parameters
+    ----------
+        z: (array of) float(s)
+            Redshift range used to compute the optical depth.
+    """
+    cos = cosmology.FlatLambdaCDM(
+        H0=ksz.h * 100, Tcmb0=ksz.T_cmb, Ob0=ksz.Ob_0, Om0=ksz.Om_0
+    )
+    z = np.sort(z)
+    xe = np.sort(ksz.xe(z))[::-1]
+
+    integ = (
+        constants.c.value
+        * constants.sigma_T.value
+        * ksz.nh
+        * xe
+        / cos.H(z).si.value
+        * (1 + z) ** 2
+    )
+    tofz = cumulative_trapezoid(integ, z, initial=0)
+
+    return tofz
+
+
 def whatthetau(params):
     xemu_Planck = keras_xe_emul.xe_emul_array(ztau, params, plot=False)
     tau = xe2tau(ztau, xemu_Planck)[:, -1]
