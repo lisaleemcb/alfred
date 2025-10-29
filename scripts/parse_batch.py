@@ -43,6 +43,7 @@ def parse_batch(dir, ext):
     truths = []
     ravg = []
     ravg_random = []
+    means = []
     medians = []
     low68 = []
     high68 = []
@@ -108,11 +109,13 @@ def parse_batch(dir, ext):
                 sampled_sims.append(sn)
                 truths.append(truth)
                 medians.append(np.median(samples, axis=0))
+                means.append(np.mean(samples, axis=0))
 
     sampled_sims = np.asarray(sampled_sims)
     truths = np.asarray(truths)
     ravg = np.asarray(ravg)
     medians = np.asarray(medians)
+    means = np.asarray(means)
     low68 = np.asarray(low68)
     high68 = np.asarray(high68)
     low95 = np.asarray(low95)
@@ -126,12 +129,13 @@ def parse_batch(dir, ext):
     intervals68 = np.swapaxes(intervals68, 1, 2)
     intervals95 = np.swapaxes(intervals95, 1, 2)
 
-    savedir = f"{home_dir}/batchstats_{ext}"
+    savedir = f"{base_dir}/metadata/batchstats_{ext}"
     np.save(f"{savedir}/sims_{ext}", sampled_sims)
     np.save(f"{savedir}/truths_{ext}", truths)
     np.save(f"{savedir}/ravg_{ext}", ravg)
     np.save(f"{savedir}/ravg_random_{ext}", ravg_random)
     np.save(f"{savedir}/medians_{ext}", medians)
+    np.save(f"{savedir}/means_{ext}", means)
     np.save(f"{savedir}/low68_{ext}", low68)
     np.save(f"{savedir}/high68_{ext}", high68)
     np.save(f"{savedir}/low95_{ext}", low95)
@@ -145,9 +149,9 @@ def parse_batch(dir, ext):
 
 
 def main():
-    dir = f"{base_dir}/inference/biases"
-    print(f"Now running through {dir}...")
-    parse_batch(dir, "v1")
+    # dir = f"{base_dir}/inference/biases"
+    # print(f"Now running through {dir}...")
+    # parse_batch(dir, "v1")
 
     dir = f"{base_dir}/inference/biases_rerun_lowernoise"
     print(f"Now running through {dir}...")

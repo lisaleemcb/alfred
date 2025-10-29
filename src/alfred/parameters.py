@@ -25,7 +25,7 @@ for i in range(k_bins.size - 1):
 k_center = np.asarray(k_center)
 
 norm_z = matplotlib.colors.Normalize(vmin=3.0, vmax=22)
-cmap_z = plt.get_cmap("viridis")
+cmap_z = plt.get_cmap("viridis_r")
 
 norm_xe = matplotlib.colors.LogNorm(vmin=1.7e-4, vmax=1.16)
 cmap_xe = plt.get_cmap("plasma")
@@ -40,12 +40,22 @@ astro_labels = [
     "ion_escapefrac_post",
 ]
 
-astro_pnames = ["L_X", "f_X", "tau", "Mmin", "f_esc"]
+astro_pnames = ["f_X", "rHS", "tau", "Mmin", "f_esc"]
 astro_pnames_formatted = [
     r"$\log{f_X}$",
     r"$r_{\mathrm{H/S}}$",
     r"$\tau_{\mathrm{SF}}$",
     r"$\log{M_{\mathrm{min}}}$",
+    r"$f_{\mathrm{esc}}$",
+    r"$\tau_{\mathrm{CMB}}$",
+    r"$A_{\mathrm{hkSZ}}$",
+]
+
+astro_wunits = [
+    r"$\log{f_X}$",
+    r"$r_{\mathrm{H/S}}$",
+    r"$\tau_{\mathrm{SF}}$ [Gyr]",
+    r"$\log{[M_{\mathrm{min}}/M_{\odot}]}$",
     r"$f_{\mathrm{esc}}$",
     r"$\tau_{\mathrm{CMB}}$",
     r"$A_{\mathrm{hkSZ}}$",
