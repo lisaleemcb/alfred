@@ -12,7 +12,7 @@ import seaborn as sns
 import pandas as pd
 import zeus
 
-from scipy.interpolate import PchipInterpolator, CubicSpline
+from scipy.interpolate import PchipInterpolator, CubicSpline, interp1d
 
 import alfred.utils as utils
 import alfred.emulator as emulator
@@ -37,6 +37,78 @@ import alfred.utils as utils
 from alfred.parameters import *
 from alfred.astrofit import *
 
+import numpy as np
+
+priors_s = np.load(
+    "/Users/emcbride/Datasets/LoReLi/inference/productionruns7_addhksz/samples_addtauCMB/samples_priors_hypercube.npy"
+)
+prior = make_tauchains(
+    priors_s[:, :3],
+    A=False,
+    dropA=False,
+    truths=df.loc[config.sn].to_dict(),
+)
+
+nbins = 30
+prior_hists = [np.histogram(row, bins=30, density=True) for row in prior.T]
+
+
+def get_weighted_stats(samples, prior_hists=prior_hists):
+    mean = []
+    low68 = []
+    high68 = []
+    low95 = []
+    high95 = []
+
+    for i in range(4):
+        counts, bins = prior_hists[i]
+
+        eps = 1e-12
+        counts[counts == 0.0] = eps
+
+        weights = interp1d(
+            bins[1:],
+            1 / counts,
+            fill_value="extrapolate",
+            bounds_error=False,
+        )
+
+        s = samples[:, i]
+        w = weights(samples[:, i])
+        m = np.average(s, weights=w)
+        l68, h68 = weighted_percentile(s, w, 68)
+        l95, h95 = weighted_percentile(s, w, 95)
+
+        mean.append(m)
+        low68.append(l68)
+        high68.append(h68)
+        low95.append(l95)
+        high95.append(h95)
+
+    return (
+        np.asarray(mean),
+        np.asarray(low68),
+        np.asarray(high68),
+        np.asarray(low95),
+        np.asarray(high95),
+    )
+
+
+def weighted_percentile(samples, weights, q=68):
+    if q == 68:
+        qs = [16, 84]
+    elif q == 95:
+        qs = [2.5, 97.5]
+    """Return the weighted percentile(s) of data x with weights w."""
+    x = np.asarray(samples)
+    w = np.asarray(weights)
+    sorter = np.argsort(x)
+    x_sorted = x[sorter]
+    w_sorted = w[sorter]
+    cdf = np.cumsum(w_sorted)
+    cdf /= cdf[-1]
+    return np.interp(np.atleast_1d(qs) / 100, cdf, x_sorted)
+
 
 def parse_batch(dir, ext):
     sampled_sims = []
@@ -51,6 +123,12 @@ def parse_batch(dir, ext):
     high95 = []
     edges68 = []
     edges95 = []
+
+    means_weighted = []
+    low68_weighted = []
+    high68_weighted = []
+    low95_weighted = []
+    high95_weighted = []
 
     pattern = re.compile(r"(\d{5})")
     for i in range(10):
@@ -73,10 +151,14 @@ def parse_batch(dir, ext):
                 if not os.path.exists(f"{filepath}/saved_chains.h5"):
                     continue
 
-                s, l = utils.load_samples(filepath, verbose=False)
+                s, _ = utils.load_samples(filepath, verbose=False)
                 samples = make_tauchains(
-                    s[:, :3], truths=df.loc[sn].to_dict(), dropA=False
+                    s[:, :3], truths=df.loc[sn].to_dict(), A=False, dropA=False
                 )
+
+                # print(f"bins", bins)
+                # print(f"chains", counts)
+
                 truth = np.asarray(
                     [*df.loc[sn].to_numpy(), *whatthetau(df.loc[sn].to_numpy())]
                 )
@@ -111,6 +193,14 @@ def parse_batch(dir, ext):
                 medians.append(np.median(samples, axis=0))
                 means.append(np.mean(samples, axis=0))
 
+                wstats = get_weighted_stats(samples, prior_hists=prior_hists)
+
+                means_weighted.append(wstats[0])
+                low68_weighted.append(wstats[1])
+                high68_weighted.append(wstats[2])
+                low95_weighted.append(wstats[3])
+                high95_weighted.append(wstats[4])
+
     sampled_sims = np.asarray(sampled_sims)
     truths = np.asarray(truths)
     ravg = np.asarray(ravg)
@@ -123,9 +213,17 @@ def parse_batch(dir, ext):
     edges68 = np.asarray(edges68)
     edges95 = np.asarray(edges95)
 
-    intervals68 = edges68 - np.stack([medians, medians], axis=1)
-    intervals95 = edges95 - np.stack([medians, medians], axis=1)
+    means_weighted = np.asarray(means_weighted)
+    low68_weighted = np.asarray(low68_weighted)
+    high68_weighted = np.asarray(high68_weighted)
+    low95_weighted = np.asarray(low68_weighted)
+    high95_weighted = np.asarray(high68_weighted)
 
+    # intervals68 = edges68 - np.stack([medians, medians], axis=1)
+    # intervals95 = edges95 - np.stack([medians, medians], axis=1)
+    #
+    intervals68 = edges68 - np.stack([means, means], axis=1)
+    intervals95 = edges95 - np.stack([means, means], axis=1)
     intervals68 = np.swapaxes(intervals68, 1, 2)
     intervals95 = np.swapaxes(intervals95, 1, 2)
 
@@ -140,6 +238,13 @@ def parse_batch(dir, ext):
     np.save(f"{savedir}/high68_{ext}", high68)
     np.save(f"{savedir}/low95_{ext}", low95)
     np.save(f"{savedir}/high95_{ext}", high95)
+
+    np.save(f"{savedir}/means_weighted_{ext}", means_weighted)
+    np.save(f"{savedir}/low68_weighted_{ext}", low68_weighted)
+    np.save(f"{savedir}/high68_weighted_{ext}", high68_weighted)
+    np.save(f"{savedir}/low95_weighted_{ext}", low95_weighted)
+    np.save(f"{savedir}/high95_weighted_{ext}", high95_weighted)
+
     np.save(f"{savedir}/CI68_{ext}", high68 - low68)
     np.save(f"{savedir}/CI95_{ext}", high95 - low95)
     np.save(f"{savedir}/intervals68_{ext}", np.abs(intervals68))
