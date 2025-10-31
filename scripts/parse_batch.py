@@ -40,7 +40,7 @@ from alfred.astrofit import *
 import numpy as np
 
 priors_s = np.load(
-    "/Users/emcbride/Datasets/LoReLi/inference/productionruns7_addhksz/samples_addtauCMB/samples_priors_hypercube.npy"
+    f"{base_dir}/inference/productionruns7_addhksz/samples_addtauCMB/samples_priors_hypercube.npy"
 )
 prior = make_tauchains(
     priors_s[:, :3],
