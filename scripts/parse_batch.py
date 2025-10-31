@@ -132,6 +132,8 @@ def parse_batch(dir, ext):
 
     pattern = re.compile(r"(\d{5})")
     for i in range(10):
+        if i != 0:
+            continue
         print(f"On {i}")
 
         directory = f"{dir}/samples_{i}"
