@@ -218,8 +218,8 @@ def parse_batch(dir, ext):
     means_weighted = np.asarray(means_weighted)
     low68_weighted = np.asarray(low68_weighted)
     high68_weighted = np.asarray(high68_weighted)
-    low95_weighted = np.asarray(low68_weighted)
-    high95_weighted = np.asarray(high68_weighted)
+    low95_weighted = np.asarray(low95_weighted)
+    high95_weighted = np.asarray(high95_weighted)
 
     # intervals68 = edges68 - np.stack([medians, medians], axis=1)
     # intervals95 = edges95 - np.stack([medians, medians], axis=1)

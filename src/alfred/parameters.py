@@ -54,7 +54,7 @@ astro_pnames_formatted = [
 astro_wunits = [
     r"$\log{f_X}$",
     r"$r_{\mathrm{H/S}}$",
-    r"$\tau_{\mathrm{SF}}$ [Gyr]",
+    r"$\log{[\tau_{\mathrm{SF}}/\mathrm{Gyr}]}$",
     r"$\log{[M_{\mathrm{min}}/M_{\odot}]}$",
     r"$f_{\mathrm{esc}}$",
     r"$\tau_{\mathrm{CMB}}$",
