@@ -12,7 +12,7 @@ import seaborn as sns
 import pandas as pd
 import zeus
 
-from scipy.interpolate import PchipInterpolator, CubicSpline, interp1d
+from scipy.interpolate import PchipInterpolator, CubicSpline
 
 import alfred.utils as utils
 import alfred.emulator as emulator
@@ -51,63 +51,6 @@ prior = make_tauchains(
 
 nbins = 30
 prior_hists = [np.histogram(row, bins=30, density=True) for row in prior.T]
-
-
-def get_weighted_stats(samples, prior_hists=prior_hists):
-    mean = []
-    low68 = []
-    high68 = []
-    low95 = []
-    high95 = []
-
-    for i in range(4):
-        counts, bins = prior_hists[i]
-
-        eps = 1e-12
-        counts[counts == 0.0] = eps
-
-        weights = interp1d(
-            bins[1:],
-            1 / counts,
-            fill_value="extrapolate",
-            bounds_error=False,
-        )
-
-        s = samples[:, i]
-        w = weights(samples[:, i])
-        m = np.average(s, weights=w)
-        l68, h68 = weighted_percentile(s, w, 68)
-        l95, h95 = weighted_percentile(s, w, 95)
-
-        mean.append(m)
-        low68.append(l68)
-        high68.append(h68)
-        low95.append(l95)
-        high95.append(h95)
-
-    return (
-        np.asarray(mean),
-        np.asarray(low68),
-        np.asarray(high68),
-        np.asarray(low95),
-        np.asarray(high95),
-    )
-
-
-def weighted_percentile(samples, weights, q=68):
-    if q == 68:
-        qs = [16, 84]
-    elif q == 95:
-        qs = [2.5, 97.5]
-    """Return the weighted percentile(s) of data x with weights w."""
-    x = np.asarray(samples)
-    w = np.asarray(weights)
-    sorter = np.argsort(x)
-    x_sorted = x[sorter]
-    w_sorted = w[sorter]
-    cdf = np.cumsum(w_sorted)
-    cdf /= cdf[-1]
-    return np.interp(np.atleast_1d(qs) / 100, cdf, x_sorted)
 
 
 def parse_batch(dir, ext):

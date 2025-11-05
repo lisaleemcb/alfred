@@ -6,7 +6,7 @@ import numpy as np
 import copy as cp
 import h5py
 
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, interp1d
 from alfred.parameters import modelparams_Gorce2022, base_dir
 
 
@@ -23,8 +23,10 @@ _logger = logging.getLogger(__name__)
 # `from ksz.skeleton import fib`,
 # when using this Python module as a library.
 
+
 def dimless(k, P):
     return (k**3.0 * P) / (2 * np.pi**2)
+
 
 def tau(n):
     """Calculates tau given an ionisation history xe(z)
@@ -37,7 +39,7 @@ def tau(n):
         z  (array_like): redshift
         tau (array_like): tau (cumulative integral)
     """
-    z_unity = 5.0 # redshift at which hydrogen is has an ionisation fraction x_HII=1
+    z_unity = 5.0  # redshift at which hydrogen is has an ionisation fraction x_HII=1
     z_HeII = 3.5  # redshift at which helium doubly ionises
 
     if z.min() <= z_unity:
@@ -50,6 +52,7 @@ def tau(n):
     spl = CubicSpline(x, y)
 
     return z, tau
+
 
 def xe_allz(z, xe):
     """Calculates tau given an ionisation history xe(z)
@@ -64,10 +67,10 @@ def xe_allz(z, xe):
     """
     xe_recomb = 1.7e-4
     Yp = 0.2453
-    not4 = 3.9715 #eta
-    fHe = Yp/(not4*(1-Yp))
+    not4 = 3.9715  # eta
+    fHe = Yp / (not4 * (1 - Yp))
 
-    z_unity = 5.0 # redshift at which hydrogen is has an ionisation fraction x_HII=1
+    z_unity = 5.0  # redshift at which hydrogen is has an ionisation fraction x_HII=1
     z_HeII = 3.5  # redshift at which helium doubly ionises
 
     if z.min() <= z_unity:
@@ -87,15 +90,17 @@ def xe_allz(z, xe):
 
     return z_all, np.minimum(xe_all(z_all), (1.08 + xe_recomb)) + add_He
 
+
 def unpack_data(spectra_dict):
-    data = np.zeros((len(spectra_dict), spectra_dict[0]['P_k'].size))
+    data = np.zeros((len(spectra_dict), spectra_dict[0]["P_k"].size))
 
     # if isinstance(zrange, int):
     #     data = spectra[zrange][key][krange[0]:krange[1]]
     for i in range(len(spectra_dict)):
-        data[i] = spectra_dict[i]['P_k']
+        data[i] = spectra_dict[i]["P_k"]
 
     return data
+
 
 def pack_params(pvals, pfit):
     params = cp.deepcopy(modelparams_Gorce2022)
@@ -104,71 +109,87 @@ def pack_params(pvals, pfit):
 
     return params
 
+
 def unpack_params(params, pfit):
     return np.asarray([params[key] for key in pfit])
+
 
 def find_index(arr):
     for i in range(arr.size - 1):
         a = arr[i:]
-       # print(f'array looks like {a}')
+        # print(f'array looks like {a}')
         if np.all(a[:-1] < a[1:]):
             return i
 
-    print('No monotonically increasing part of this function. Are you sure this is correct?')
+    print(
+        "No monotonically increasing part of this function. Are you sure this is correct?"
+    )
     return np.nan
 
-def get_sims(dir=f'spectra/kSZ/LoReLi/nells30', base_dir=base_dir):
+
+def get_sims(dir=f"spectra/kSZ/LoReLi/nells30", base_dir=base_dir):
     sims = []
 
-    path = f'{base_dir}/{dir}'
+    path = f"{base_dir}/{dir}"
 
-    print(f'parsing {path} ...')
+    print(f"parsing {path} ...")
 
     for filename in os.listdir(path):
-        #files_LoReLi.append(filename)
+        # files_LoReLi.append(filename)
         # print(repr(filename))
-        match = re.search(r'\d{5}', filename)
-       # print(match.group())
+        match = re.search(r"\d{5}", filename)
+        # print(match.group())
         if match.group() is not None:
             sims.append(match.group())
         else:
-            print(f'filename {filename} has no match')
+            print(f"filename {filename} has no match")
 
-    print(f'{len(sims)} sims available')
+    print(f"{len(sims)} sims available")
 
     return sims
 
-def spectra(sn, dir='nells30_v5', key='Dell', basedir=base_dir, prefix='kSZ_LoReLi',
-    verbose=True):
+
+def spectra(
+    sn,
+    dir="nells30_v5",
+    key="Dell",
+    basedir=base_dir,
+    prefix="kSZ_LoReLi",
+    verbose=True,
+):
     fn = f"{base_dir}/spectra/kSZ/LoReLi/{dir}/{prefix}_simu{sn}.npz"
     f = np.load(fn, allow_pickle=True)
 
     return f[key]
 
+
 def smooth_Pee(sim):
     k = []
     Pee = []
-    for i in range(0, sim.k.size - 1,2):
+    for i in range(0, sim.k.size - 1, 2):
         k.append((sim.k[i] + sim.k[i + 1]) / 2.0)
-        Pee.append((sim.Pee[:,i] + sim.Pee[:,i + 1]) / 2.0)
+        Pee.append((sim.Pee[:, i] + sim.Pee[:, i + 1]) / 2.0)
 
     Pee = np.asarray(Pee).T
 
     return k, Pee
 
+
 def load_samples(dir, verbose=True, flatten=True):
     if verbose:
         print(f"Loading samples from {dir}...")
     with h5py.File(f"{dir}/saved_chains.h5", "r") as hf:
-
-        samples = np.copy(hf['samples'])
-        lp = np.copy(hf['logprob'])
+        samples = np.copy(hf["samples"])
+        lp = np.copy(hf["logprob"])
 
         if flatten:
-            samples = samples.reshape((samples.shape[0] * samples.shape[1], samples.shape[2]))
+            samples = samples.reshape(
+                (samples.shape[0] * samples.shape[1], samples.shape[2])
+            )
             lp = lp.flatten()
 
     return samples, lp
+
 
 def summon_emu(dir, base=f"{base_dir}/emulators", verbose=False):
     import joblib
@@ -179,16 +200,15 @@ def summon_emu(dir, base=f"{base_dir}/emulators", verbose=False):
 
     scalerX = joblib.load(f"{path}/scalerX.pkl")
     scalerY = joblib.load(f"{path}/scalerY.pkl")
-    model= keras.models.load_model(f"{path}/model.keras")
+    model = keras.models.load_model(f"{path}/model.keras")
 
-    emu = {'scalerX': scalerX,
-        'scalerY': scalerY,
-        'model': model}
+    emu = {"scalerX": scalerX, "scalerY": scalerY, "model": model}
 
     if verbose:
         print(f"SUMMONING THE EMU!!! From {path}...")
 
     return emu
+
 
 def plot_vlines(values, axes, **kwargs):
     ndim = axes.shape[0]
@@ -204,6 +224,7 @@ def plot_vlines(values, axes, **kwargs):
             ax.axvline(values[xi], **kwargs)
             ax.axhline(values[yi], **kwargs)
             ax.plot(values[xi], **kwargs)
+
 
 # import matplotlib as m
 # cmap = m.cm.get_cmap('Blues')
@@ -230,6 +251,7 @@ def plot_vlines(values, axes, **kwargs):
 
 # plt.tight_layout()
 
+
 def xe(z, z_data, xe_data, helium=True, helium2=True, just_H=False):
     """
     From alfred.KSZ.py but for use without class
@@ -244,21 +266,28 @@ def xe(z, z_data, xe_data, helium=True, helium2=True, just_H=False):
             Redshift range used to compute the ionisation history.
     """
 
-    from scipy.interpolate import interp1d
-    from alfred.parameters import fHe, xe_recomb, helium_fullreion_redshift, helium_fullreion_deltaredshift
+    from alfred.parameters import (
+        fHe,
+        xe_recomb,
+        helium_fullreion_redshift,
+        helium_fullreion_deltaredshift,
+    )
 
     z_data = np.sort(z_data)
     xe_data = np.sort(xe_data)[::-1]
-    xe_spline = interp1d(z_data, xe_data, axis=0, fill_value="extrapolate") #CubicSpline(z, xe, axis=0)
+    xe_spline = interp1d(
+        z_data, xe_data, axis=0, fill_value="extrapolate"
+    )  # CubicSpline(z, xe, axis=0)
 
-    frac = 1.0 # - self.xe_recomb)
+    frac = 1.0  # - self.xe_recomb)
     xe_He = 0
     if helium:
-        frac = (1.0 + fHe - xe_recomb)
+        frac = 1.0 + fHe - xe_recomb
         # add second He reionisation
         if helium2:
-            assert (helium), "Need to set both He reionisation "\
-                "to True, cannot have HeII without HeI"
+            assert helium, (
+                "Need to set both He reionisation to True, cannot have HeII without HeI"
+            )
             a = np.divide(1, z + 1.0)
             deltayHe2 = (
                 1.5
@@ -266,13 +295,15 @@ def xe(z, z_data, xe_data, helium=True, helium2=True, just_H=False):
                 * helium_fullreion_deltaredshift
             )
             VarMid2 = (1.0 + helium_fullreion_redshift) ** 1.5
-            xod2 = (VarMid2 - 1.0 / a ** 1.5) / deltayHe2
+            xod2 = (VarMid2 - 1.0 / a**1.5) / deltayHe2
             tgh2 = np.tanh(xod2)  # check if xod<100
             xe_He += (fHe - xe_recomb) * (tgh2 + 1.0) / 2.0
             #  self.xe_He = np.where(z < self.z_early, self.xe_He, 0.0)
 
         xe_early = np.where(z > z_data.max(), xe_recomb, 0.0)
-        xe_reion = frac * np.where((z <= z_data.max()) & (z >= z_data.min()), xe_spline(z), 0.0)
+        xe_reion = frac * np.where(
+            (z <= z_data.max()) & (z >= z_data.min()), xe_spline(z), 0.0
+        )
         xe_late = np.where(z < z_data.min(), frac, 0.0)
 
         # print(frac)
@@ -287,7 +318,83 @@ def xe(z, z_data, xe_data, helium=True, helium2=True, just_H=False):
         xe = xe_early + xe_reion + xe_late + xe_He
         # the -1 below is totally ad hoc to make sure it doesn't unnecessarily ruin He reion
         if helium:
-            xe = np.where((z < helium_fullreion_redshift - 1) & (xe <= (1.0 + 2 * fHe - xe_recomb)), (1.0 + 2 * fHe - xe_recomb), xe)
-
+            xe = np.where(
+                (z < helium_fullreion_redshift - 1)
+                & (xe <= (1.0 + 2 * fHe - xe_recomb)),
+                (1.0 + 2 * fHe - xe_recomb),
+                xe,
+            )
 
     return xe
+
+
+def prior_flatten(raw_samples, prior_hists):
+    samples = []
+    weights = []
+
+    for i in range(4):
+        counts, bins = prior_hists[i]
+
+        eps = 1e-12
+        counts[counts == 0.0] = eps
+
+        weighting_function = interp1d(
+            bins[1:],
+            1 / counts,
+            fill_value="extrapolate",
+            bounds_error=False,
+        )
+
+        s = raw_samples[:, i]
+        w = weighting_function(raw_samples[:, i])
+
+        samples.append(s)
+        weights.append(w)
+
+    return samples, weights
+
+
+def get_weighted_stats(raw_samples, prior_hists):
+    mean = []
+    low68 = []
+    high68 = []
+    low95 = []
+    high95 = []
+
+    samples, weights = prior_flatten(raw_samples, prior_hists)
+    for i in range(4):
+        s = samples[i]
+        w = weights[i]
+        m = np.average(s, weights=w)
+        l68, h68 = weighted_percentile(s, w, 68)
+        l95, h95 = weighted_percentile(s, w, 95)
+
+        mean.append(m)
+        low68.append(l68)
+        high68.append(h68)
+        low95.append(l95)
+        high95.append(h95)
+
+    return (
+        np.asarray(mean),
+        np.asarray(low68),
+        np.asarray(high68),
+        np.asarray(low95),
+        np.asarray(high95),
+    )
+
+
+def weighted_percentile(samples, weights, q=68):
+    if q == 68:
+        qs = [16, 84]
+    elif q == 95:
+        qs = [2.5, 97.5]
+    """Return the weighted percentile(s) of data x with weights w."""
+    x = np.asarray(samples)
+    w = np.asarray(weights)
+    sorter = np.argsort(x)
+    x_sorted = x[sorter]
+    w_sorted = w[sorter]
+    cdf = np.cumsum(w_sorted)
+    cdf /= cdf[-1]
+    return np.interp(np.atleast_1d(qs) / 100, cdf, x_sorted)

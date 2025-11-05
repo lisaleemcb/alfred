@@ -58,6 +58,7 @@ astro_wunits = [
     r"$\log{[M_{\mathrm{min}}/M_{\odot}]}$",
     r"$f_{\mathrm{esc}}$",
     r"$\tau_{\mathrm{CMB}}$",
+    r"$A_{\mathrm{bias}}$ ",
     r"$A_{\mathrm{hkSZ}}$",
 ]
 
