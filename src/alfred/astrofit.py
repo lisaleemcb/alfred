@@ -515,6 +515,47 @@ def get_ci(samples, sn, ci=95, edges=False):
     return CI
 
 
+def summary_statistics(raw_samples, sn, prior_hists):
+    samples = make_tauchains(
+        raw_samples[:, :3],
+        A=False,
+        dropA=False,
+        truths=df.loc[sn].to_dict(),
+    )
+    truths = [*df.loc[sn].to_numpy(), whatthetau(df.loc[sn].to_numpy())[0]]
+    means, truths, low68, high68, _, _ = utils.get_weighted_stats(
+        samples, truths, prior_hists
+    )
+
+    edges68 = []
+    for i in range(means.shape[0]):
+        low = low68[i]
+        high = high68[i]
+
+    edges68.append((low, high))
+
+    if means.ndim == 1:
+        intervals68 = edges68 - np.stack([means, means], axis=1)
+        biases = means - truths[2:]
+        sigma_max_68 = np.max(np.abs(intervals68), axis=1)
+    else:
+        intervals68 = edges68 - np.stack([means, means], axis=1)
+        intervals68 = np.swapaxes(intervals68, 1, 2)
+        # for i in range(means.shape[0]):
+        #     low = low95[i]
+        #     high = high95[i]
+
+        #     edges95.append((low, high))
+
+        # intervals95 = edges95 - np.stack([means, means], axis=1)
+        # intervals95 = np.swapaxes(intervals95, 1, 2)
+
+        biases = means - truths[:, 2:]
+        sigma_max_68 = np.max(np.abs(intervals68), axis=2)
+
+    return biases, sigma_max_68
+
+
 class MCMC:
     def __init__(
         self,
