@@ -355,7 +355,7 @@ def prior_flatten(raw_samples, prior_hists):
 
 
 def summary_statistics(raw_samples, sn, prior_hists):
-    from alfred.astrofit import df, whatthetau
+    from alfred.astrofit import df, whatthetau, make_tauchains
 
     samples = make_tauchains(
         raw_samples[:, :3],
