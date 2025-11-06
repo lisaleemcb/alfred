@@ -12,9 +12,7 @@ model = keras.models.load_model(f"{path}/{emul}.keras")
 data = np.load(f"{path}/{emul}_pmean_pstd_zm_zs_xev.npy", allow_pickle=True)
 
 
-def xe_emul_dict(
-    zvect, params, He1=False, He2=False, zHe=3.5, plot=False, newfig=False
-):
+def xe_emul_dict(zvect, params, He1=True, He2=True, zHe=3.5, plot=False, newfig=False):
     """
     zvect : vect of z values at which xe should be evaluated [z increasing]
     params: dict of params values
@@ -107,8 +105,8 @@ def xe_emul_array(
     zvect,
     params_array,
     emul="keras_xe_emul_glx",
-    He1=False,
-    He2=False,
+    He1=True,
+    He2=True,
     zHe=3.5,
     plot=False,
     newfig=False,
