@@ -516,6 +516,8 @@ def get_ci(samples, sn, ci=95, edges=False):
 
 
 def summary_statistics(raw_samples, sn, prior_hists):
+    from alfred.utils import get_weighted_stats
+
     samples = make_tauchains(
         raw_samples[:, :3],
         A=False,
@@ -523,7 +525,7 @@ def summary_statistics(raw_samples, sn, prior_hists):
         truths=df.loc[sn].to_dict(),
     )
     truths = [*df.loc[sn].to_numpy(), whatthetau(df.loc[sn].to_numpy())[0]]
-    means, truths, low68, high68, _, _ = utils.get_weighted_stats(
+    means, truths, low68, high68, _, _ = get_weighted_stats(
         samples, truths, prior_hists
     )
 
