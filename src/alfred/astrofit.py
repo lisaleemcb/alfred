@@ -525,14 +525,15 @@ def summary_statistics(raw_samples, sn, prior_hists):
         truths=df.loc[sn].to_dict(),
     )
     truths = [*df.loc[sn].to_numpy(), whatthetau(df.loc[sn].to_numpy())[0]]
-    means, low68, high68, _, _ = get_weighted_stats(samples, truths, prior_hists)
+    means, low68, high68, _, _ = get_weighted_stats(samples, prior_hists)
 
     edges68 = []
+
     for i in range(means.shape[0]):
         low = low68[i]
         high = high68[i]
 
-    edges68.append((low, high))
+        edges68.append((low, high))
 
     if means.ndim == 1:
         intervals68 = edges68 - np.stack([means, means], axis=1)
