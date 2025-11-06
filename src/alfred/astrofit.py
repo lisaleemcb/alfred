@@ -525,9 +525,7 @@ def summary_statistics(raw_samples, sn, prior_hists):
         truths=df.loc[sn].to_dict(),
     )
     truths = [*df.loc[sn].to_numpy(), whatthetau(df.loc[sn].to_numpy())[0]]
-    means, truths, low68, high68, _, _ = get_weighted_stats(
-        samples, truths, prior_hists
-    )
+    means, low68, high68, _, _ = get_weighted_stats(samples, truths, prior_hists)
 
     edges68 = []
     for i in range(means.shape[0]):

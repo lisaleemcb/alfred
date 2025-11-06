@@ -354,7 +354,7 @@ def prior_flatten(raw_samples, prior_hists):
     return np.asarray(samples).T, np.asarray(weights).T
 
 
-def get_weighted_stats(raw_samples, truths, prior_hists):
+def get_weighted_stats(raw_samples, prior_hists):
     means = []
     low68 = []
     high68 = []
