@@ -515,9 +515,7 @@ def get_ci(samples, sn, ci=95, edges=False):
     return CI
 
 
-def summary_statistics(raw_samples, sn, prior_hists):
-    from alfred.utils import get_weighted_stats
-
+def summary_statistics(raw_samples, sn, prior_hists, verbose=False):
     samples = make_tauchains(
         raw_samples[:, :3],
         A=False,
@@ -525,7 +523,15 @@ def summary_statistics(raw_samples, sn, prior_hists):
         truths=df.loc[sn].to_dict(),
     )
     truths = [*df.loc[sn].to_numpy(), whatthetau(df.loc[sn].to_numpy())[0]]
+    truths[2] += -np.log10(1e2)
     means, low68, high68, _, _ = get_weighted_stats(samples, prior_hists)
+
+    if verbose:
+        print(f"samples: {samples.mean(axis=0)}")
+        print(f"truths: {truths}")
+        print(f"means: {means}")
+        print(f"low68: {low68}")
+        print(f"high68: {high68}")
 
     edges68 = []
 
@@ -539,6 +545,11 @@ def summary_statistics(raw_samples, sn, prior_hists):
         intervals68 = edges68 - np.stack([means, means], axis=1)
         biases = means - truths[2:]
         sigma_max_68 = np.max(np.abs(intervals68), axis=1)
+
+        if verbose:
+            print(f"biases are: {biases}")
+            print(f"sigmas are: {sigma_max_68}")
+
     else:
         intervals68 = edges68 - np.stack([means, means], axis=1)
         intervals68 = np.swapaxes(intervals68, 1, 2)
@@ -554,7 +565,79 @@ def summary_statistics(raw_samples, sn, prior_hists):
         biases = means - truths[:, 2:]
         sigma_max_68 = np.max(np.abs(intervals68), axis=2)
 
-    return biases, sigma_max_68
+    return means, biases, sigma_max_68
+
+
+def prior_flatten(raw_samples, prior_hists):
+    samples = []
+    weights = []
+
+    for i in range(4):
+        counts, bins = prior_hists[i]
+
+        eps = 1e-12
+        counts[counts == 0.0] = eps
+
+        weighting_function = interp1d(
+            bins[1:],
+            1 / counts,
+            fill_value="extrapolate",
+            bounds_error=False,
+        )
+
+        s = raw_samples[:, i]
+        w = weighting_function(raw_samples[:, i])
+
+        samples.append(s)
+        weights.append(w)
+
+    return np.asarray(samples).T, np.asarray(weights).T
+
+
+def get_weighted_stats(raw_samples, prior_hists):
+    means = []
+    low68 = []
+    high68 = []
+    low95 = []
+    high95 = []
+
+    samples, weights = prior_flatten(raw_samples, prior_hists)
+    for i in range(4):
+        s = samples[:, i]
+        w = weights[:, i]
+        m = np.average(s, weights=w)
+        l68, h68 = weighted_percentile(s, w, 68)
+        l95, h95 = weighted_percentile(s, w, 95)
+
+        means.append(m)
+        low68.append(l68)
+        high68.append(h68)
+        low95.append(l95)
+        high95.append(h95)
+
+    return (
+        np.asarray(means),
+        np.asarray(low68),
+        np.asarray(high68),
+        np.asarray(low95),
+        np.asarray(high95),
+    )
+
+
+def weighted_percentile(samples, weights, q=68):
+    if q == 68:
+        qs = [16, 84]
+    elif q == 95:
+        qs = [2.5, 97.5]
+    """Return the weighted percentile(s) of data x with weights w."""
+    x = np.asarray(samples)
+    w = np.asarray(weights)
+    sorter = np.argsort(x)
+    x_sorted = x[sorter]
+    w_sorted = w[sorter]
+    cdf = np.cumsum(w_sorted)
+    cdf /= cdf[-1]
+    return np.interp(np.atleast_1d(qs) / 100, cdf, x_sorted)
 
 
 class MCMC:
