@@ -12,6 +12,7 @@ import zeus
 from scipy.integrate import cumulative_trapezoid
 from astropy import cosmology, units, constants
 from types import SimpleNamespace
+from scipy.interpolate import interp1d
 
 
 import joblib
