@@ -525,6 +525,7 @@ def summary_statistics(raw_samples, sn, prior_hists, verbose=False):
     )
     truths = [*df.loc[sn].to_numpy(), whatthetau(df.loc[sn].to_numpy())[0]]
     truths[2] += -np.log10(1e2)
+    samples[:, 0] += -np.log10(1e2)
     means, low68, high68, _, _ = get_weighted_stats(samples, prior_hists)
 
     if verbose:
