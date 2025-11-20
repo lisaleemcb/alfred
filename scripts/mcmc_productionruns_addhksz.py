@@ -1,39 +1,39 @@
+import argparse
+import copy as cp
 import os
 import re
 import time
-import copy as cp
-import argparse
-import toml
-import numpy as np
-import matplotlib.pyplot as plt
+
+import joblib
+import keras
 import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import tensorflow as tf
+import toml
 import zeus
+from scipy.interpolate import CubicSpline, PchipInterpolator
 
-from scipy.interpolate import PchipInterpolator, CubicSpline
-
-import alfred.utils as utils
 import alfred.emulator as emulator
 import alfred.KSZ as KSZ
 import alfred.peefit as peefit
 import alfred.surveys as surveys
-
-import joblib
-import keras
-import tensorflow as tf
+import alfred.utils as utils
 
 tf.config.set_visible_devices([], "GPU")
 
 import warnings
 from types import SimpleNamespace
-from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
-from catwoman.shelter import Cat
 
-import alfred.surveys as surveys
+from catwoman.shelter import Cat
+from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
+
 import alfred.emulator as emulator
+import alfred.surveys as surveys
 import alfred.utils as utils
-from alfred.parameters import *
 from alfred.astrofit import *
+from alfred.parameters import *
 
 
 def main():
@@ -210,7 +210,7 @@ def main():
             datapoints=None,  # will pull from config file
             A=np.random.uniform(0.99, 1.01, size=config.nwalkers),
             Ashape=Ashape,
-            Astats=[Amean, Asigma],
+            Astats=[1.0, Asigma],
             fit_hksz=True,
             A_hksz=2.9,  # muK^2
             add_fg_residuals=True,

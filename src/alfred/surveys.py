@@ -1,12 +1,10 @@
 import numpy as np
-import alfred.surveys as surveys
 
 import alfred.astrofit
-
-from alfred.parameters import home_dir, base_dir
-from alfred.utils import summon_emu
+import alfred.surveys as surveys
 from alfred.emulator import kemu
-
+from alfred.parameters import base_dir, home_dir
+from alfred.utils import summon_emu
 
 telescopes = {
     "SO-LAT": {"fsky": 0.4, "fwhm": 1.5, "noise": 6.0, "fg_bump": 1.0},
@@ -41,7 +39,9 @@ def noise(ls, telescope, pol=False, is_cl=False):
 
 
 def emu_error(
-    ells, file=f"{base_dir}/emulators/setrandomseed3/emulator_std.npy", verbose=True
+    ells,
+    file=f"{base_dir}/emulators/setrandomseed3/ensemble_error_v5.1.npy",
+    verbose=True,
 ):
     if verbose:
         print(f"Loading emulator error from {file}...")
