@@ -96,9 +96,14 @@ def error_cov(
 
     sigma_noise = np.zeros_like(datapoints)
     if include_noise:
-        sigma_noise += (
-            modes(ells, telescope) * surveys.noise(ells, telescope, pol=False)
-        ) / np.sqrt(delta_ell)
+        if binning:
+            if verbose:
+                print(f"binning noise in ell...")
+            sigma_noise += (
+                modes(ells, telescope) * surveys.noise(ells, telescope, pol=False)
+            ) / np.sqrt(delta_ell)
+        else:
+            sigma_noise += surveys.noise(ells, telescope, pol=False)
         if verbose:
             print(f"noise: {sigma_noise}")
 
@@ -106,11 +111,18 @@ def error_cov(
     if include_fgresiduals:
         #  bump_fg_fraction = telescope['fg_bump']
         fg_residuals = np.genfromtxt(fgres_file).T
-        sigma_residuals += (
-            modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])
-        ) / np.sqrt(delta_ell)
+        if binning:
+            if verbose:
+                print(f"binning foreground residuals in ell...")
+            sigma_residuals += (
+                modes(ells, telescope) * np.interp(ells, fg_residuals[0], fg_residuals[1])
+            ) / np.sqrt(delta_ell)
 
-        sigma_residuals *= telescope["fg_bump"]
+            sigma_residuals *= telescope["fg_bump"]
+        else:
+            sigma_residuals += np.interp(ells, fg_residuals[0], fg_residuals[1]) * telescope[
+                "fg_bump"
+            ]
 
         if verbose:
             print(f"foreground residuals: {sigma_residuals}")
