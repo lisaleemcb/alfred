@@ -7,7 +7,7 @@ from alfred.parameters import base_dir, home_dir
 from alfred.utils import summon_emu
 
 telescopes = {
-    "SO-LAT": {"fsky": 0.4, "fwhm": 1.5, "noise": 6.0, "fg_bump": 1.0},
+    "SO-LAT": {"fsky": 0.4, "fwhm": 1.5, "noise": 6.0, "fg_bump": 10.0},
     "SO-SAT": {"fsky": 0.1, "fwhm": 10.0, "noise": 2.5, "fg_bump": 1.0},
     "CMB-S4": {"fsky": 0.6, "fwhm": 1.0, "noise": 1.4142, "fg_bump": 1.0},
     "CMB-HD": {"fsky": 0.6, "fwhm": 0.42, "noise": 0.7, "fg_bump": 1.0},
